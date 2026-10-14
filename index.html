@@ -1,2240 +1,1318 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Photorealistic 3D EV Electric Motor & Drive Unit</title>
-  <!-- Tailwind CSS -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D EV Traction Motor & Engine Workshop</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Three.js & OrbitControls -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    body, html {
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+    body {
       margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
       overflow: hidden;
-      background-color: #060a12;
+      background-color: #0b0e14;
+      color: #f8fafc;
       font-family: 'Inter', sans-serif;
-      color: #f1f5f9;
+      user-select: none;
     }
-    .font-mono-tech {
-      font-family: 'JetBrains Mono', monospace;
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glass {
+      background: rgba(15, 23, 42, 0.84);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.16);
     }
-    #canvas-container {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
+    .hotspot-label {
+      pointer-events: auto;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
     }
-    /* Glassmorphic UI Panels */
-    .glass-panel {
-      background: rgba(10, 16, 28, 0.84);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(56, 189, 248, 0.18);
-      box-shadow: 0 12px 40px -8px rgba(0, 0, 0, 0.75);
-    }
-    .glass-pill {
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .glass-pill:hover {
-      border-color: rgba(56, 189, 248, 0.55);
-      background: rgba(30, 41, 59, 0.92);
-    }
-    .glass-pill.active {
-      background: linear-gradient(135deg, rgba(14, 165, 233, 0.28), rgba(37, 99, 235, 0.28));
+    .hotspot-label:hover {
+      transform: scale(1.06);
       border-color: #38bdf8;
-      color: #38bdf8;
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
     }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.4);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(56, 189, 248, 0.35);
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(56, 189, 248, 0.6);
-    }
-    /* Custom Range Sliders */
-    input[type=range] {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 100%;
-      background: transparent;
-    }
-    input[type=range]::-webkit-slider-runnable-track {
-      width: 100%;
-      height: 6px;
-      cursor: pointer;
-      background: rgba(51, 65, 85, 0.8);
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-    }
-    input[type=range]::-webkit-slider-thumb {
-      height: 18px;
-      width: 18px;
-      border-radius: 50%;
-      background: #38bdf8;
-      cursor: pointer;
-      -webkit-appearance: none;
-      margin-top: -7px;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
-      border: 2px solid #ffffff;
-      transition: transform 0.15s ease;
-    }
-    input[type=range]::-webkit-slider-thumb:hover {
-      transform: scale(1.15);
-    }
-    /* Pedal Active Press Visuals */
-    .pedal-btn {
-      transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .pedal-btn:active, .pedal-btn.pressed {
-      transform: translateY(3px) scale(0.97);
-    }
-    @keyframes pulse-glow {
-      0%, 100% { box-shadow: 0 0 12px rgba(16, 185, 129, 0.35); }
-      50% { box-shadow: 0 0 24px rgba(16, 185, 129, 0.75); }
-    }
-    .engine-running-glow {
-      animation: pulse-glow 2s infinite;
+    input[type="range"] {
+      accent-color: #38bdf8;
     }
   </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
-<body class="relative select-none">
+<body class="relative w-screen h-screen">
 
-  <!-- 3D WebGL Viewport Container -->
-  <div id="canvas-container"></div>
+  <!-- 3D Viewport Container -->
+  <div id="canvas-container" class="w-full h-full"></div>
 
-  <!-- Hover Part Name Tooltip -->
-  <div id="hover-tooltip" class="fixed pointer-events-none z-50 hidden px-3 py-1.5 rounded-lg glass-panel text-xs font-medium text-sky-300 border border-sky-400/40 shadow-lg transform -translate-x-1/2 -translate-y-full -mt-3">
-    Component
-  </div>
+  <!-- 2D Floating Labels Container -->
+  <div id="labels-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
 
-  <!-- TOP NAVIGATION BAR -->
-  <header class="fixed top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
-    <!-- Brand & Model Badge -->
-    <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow-md shadow-sky-500/20">
-        <i class="fa-solid fa-bolt text-white text-base"></i>
+  <!-- Top Navigation Bar -->
+  <header class="absolute top-3 left-3 right-3 flex items-center justify-between px-4 py-2.5 rounded-xl glass z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400">
+        <i data-lucide="zap" class="w-5 h-5"></i>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-sm font-bold tracking-tight text-white">800V SiC eAxle Drive Unit</h1>
-          <span class="px-2 py-0.5 text-[10px] font-mono-tech font-semibold uppercase tracking-wider bg-sky-500/20 text-sky-300 rounded-full border border-sky-400/30">CAD Rev 4.2</span>
+          <h1 class="text-sm font-bold tracking-wide text-white">800V SiC E-AXLE DRIVE UNIT</h1>
+          <span class="text-[10px] mono uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/30">Engine Workshop Bench</span>
         </div>
-        <p class="text-[11px] text-slate-400">3-in-1 Interior Permanent Magnet Synchronous Motor (IPMSM)</p>
+        <p class="text-[11px] text-slate-400">IPM-SynRM Traction Motor • 9.05:1 Helical Reduction • Elevated Dual Cradle Stand</p>
       </div>
     </div>
 
-    <!-- Top Quick Actions & View Modes -->
-    <div class="flex flex-wrap items-center gap-1.5 pointer-events-auto">
-      <button id="btn-autoshop" class="glass-pill active px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
-        <i class="fa-solid fa-warehouse text-amber-400"></i>
-        <span>EV Autoshop</span>
+    <div class="flex items-center gap-2">
+      <button id="btn-toggle-workshop" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-400/40 hover:bg-amber-500/30 transition flex items-center gap-1.5">
+        <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+        <span>Workshop Bench: ON</span>
       </button>
-
-      <button id="btn-cutaway" class="glass-pill px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
-        <i class="fa-solid fa-scissors text-sky-400"></i>
+      <button id="btn-cutaway" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:border-sky-400/50 transition flex items-center gap-1.5">
+        <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
         <span>90° Cutaway</span>
       </button>
-
-      <button id="btn-thermal" class="glass-pill px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
-        <i class="fa-solid fa-temperature-high text-rose-400"></i>
-        <span>Thermal Map</span>
+      <button id="btn-labels" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-500/20 text-sky-300 border border-sky-400/40 hover:bg-sky-500/30 transition flex items-center gap-1.5">
+        <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+        <span>3D Callouts</span>
       </button>
-
-      <button id="btn-flux" class="glass-pill active px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
-        <i class="fa-solid fa-magnet text-cyan-400"></i>
-        <span>Magnetic Flux</span>
+      <button id="btn-reset-cam" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 text-slate-300 border border-slate-700 hover:text-white transition flex items-center gap-1.5">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        <span>Reset View</span>
       </button>
-
-      <button id="btn-tour" class="glass-pill px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5">
-        <i class="fa-solid fa-route text-emerald-400"></i>
-        <span>Guided Tour</span>
-      </button>
-
-      <button id="btn-reset-cam" class="glass-pill px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5" title="Reset Camera Angle">
-        <i class="fa-solid fa-video text-slate-300"></i>
-        <span class="hidden sm:inline">Reset View</span>
-      </button>
-
-      <!-- Save & GitHub Repo Backup Button -->
-      <button id="btn-save-repo" class="px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-900/40 border border-emerald-400/40 transition">
-        <i class="fa-solid fa-cloud-arrow-down"></i>
-        <span>Save / Repo</span>
-      </button>
-
-      <!-- Show Inspector Button (Appears when Inspector is closed) -->
-      <button id="btn-show-inspector" class="hidden glass-pill px-3 py-2 rounded-xl text-xs font-semibold text-sky-300 border-sky-400/50 items-center gap-1.5">
-        <i class="fa-solid fa-circle-info"></i>
-        <span>Show Inspector</span>
+      <button id="btn-show-inspector" class="hidden px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500 text-slate-950 hover:bg-sky-400 transition">
+        Show Inspector
       </button>
     </div>
   </header>
 
-  <!-- LEFT CONTROL PANEL (Parts Directory, Assembly & Operation) -->
-  <aside class="fixed top-20 left-3 bottom-20 w-80 max-w-[calc(100vw-24px)] z-20 flex flex-col glass-panel rounded-2xl overflow-hidden pointer-events-auto">
-    <!-- Navigation Tabs -->
-    <div class="grid grid-cols-3 border-b border-slate-800/80 bg-slate-900/60 p-1 gap-1">
-      <button data-tab="parts" class="tab-btn active py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 bg-sky-500/20 text-sky-300 border border-sky-400/30">
-        <i class="fa-solid fa-cubes"></i>
-        <span>Parts (8)</span>
+  <!-- Left Control Dock -->
+  <aside class="absolute top-20 left-3 bottom-3 w-80 rounded-xl glass flex flex-col z-20 overflow-hidden">
+    <!-- Tabs -->
+    <div class="grid grid-cols-2 border-b border-slate-800 p-1.5 gap-1 bg-slate-900/60">
+      <button id="tab-btn-explore" class="py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/30">
+        Parts & Assembly
       </button>
-      <button data-tab="explode" class="tab-btn py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
-        <i class="fa-solid fa-arrows-left-right-to-line"></i>
-        <span>CAD Slice</span>
-      </button>
-      <button data-tab="operate" class="tab-btn py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
-        <i class="fa-solid fa-gauge-high text-emerald-400"></i>
-        <span>Drive Dyno</span>
+      <button id="tab-btn-operate" class="py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">
+        Dyno & Pedals
       </button>
     </div>
 
-    <!-- TAB 1: PARTS DIRECTORY -->
-    <div id="tab-parts" class="tab-content flex-1 overflow-y-auto p-3 space-y-1.5">
-      <div class="flex items-center justify-between px-1 mb-2">
-        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Select Sub-Assembly</span>
-        <button id="btn-show-all-parts" class="text-[11px] text-sky-400 hover:text-sky-300 font-medium">Show All</button>
-      </div>
-      <div id="parts-list-container" class="space-y-1.5"></div>
-    </div>
-
-    <!-- TAB 2: EXPLODED VIEW & SECTION CUTAWAY -->
-    <div id="tab-explode" class="tab-content hidden flex-1 overflow-y-auto p-4 space-y-5">
-      <!-- Explode Axial Slider -->
-      <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-            <i class="fa-solid fa-up-right-and-down-left-from-center text-sky-400"></i>
-            Axial Exploded View
-          </label>
-          <span id="explode-val-label" class="text-xs font-mono-tech text-sky-400 font-semibold">0%</span>
+    <!-- Explore Panel -->
+    <div id="panel-explore" class="flex-1 overflow-y-auto p-3.5 space-y-4">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-3">
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-medium text-slate-300">Exploded View Separation</span>
+          <span id="explode-val" class="mono text-sky-400">0%</span>
         </div>
-        <input id="slider-explode" type="range" min="0" max="100" value="0">
-        <div class="flex justify-between text-[10px] text-slate-500 mt-1.5">
-          <span>Assembled</span>
-          <span>50% Spacing</span>
-          <span>Full CAD Spread</span>
+        <input id="slider-explode" type="range" min="0" max="100" value="0" class="w-full cursor-pointer" />
+        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+          <span>Assembled on Cradle</span>
+          <span>Full Axial Split</span>
         </div>
       </div>
 
-      <!-- 90° Section Cutaway Depth -->
-      <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-            <i class="fa-solid fa-scissors text-amber-400"></i>
-            CAD Section Cutaway Depth
-          </label>
-          <span id="cutaway-val-label" class="text-xs font-mono-tech text-amber-400 font-semibold">Off</span>
+      <div id="cutaway-slider-box" class="hidden bg-slate-900/80 border border-amber-500/30 rounded-lg p-3">
+        <div class="flex justify-between text-xs mb-1.5">
+          <span class="font-medium text-amber-300">CAD Section Depth</span>
+          <span id="cutaway-val" class="mono text-amber-400">50%</span>
         </div>
-        <input id="slider-cutaway" type="range" min="0" max="100" value="0">
-        <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
-          Slices through the outer cast aluminum housing and stator laminations to expose the internal 0.7mm air gap and V-shaped neodymium magnets.
-        </p>
+        <input id="slider-cutaway" type="range" min="0" max="100" value="50" class="w-full cursor-pointer" />
       </div>
 
-      <!-- Outer Housing Opacity -->
-      <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800">
-        <div class="flex justify-between items-center mb-2">
-          <label class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-            <i class="fa-solid fa-eye text-purple-400"></i>
-            Stator & Casing X-Ray
-          </label>
-          <span id="xray-val-label" class="text-xs font-mono-tech text-purple-400 font-semibold">Solid</span>
-        </div>
-        <input id="slider-xray" type="range" min="0" max="85" value="0">
-      </div>
-    </div>
-
-    <!-- TAB 3: DRIVE DYNO & SOUND ENGINE -->
-    <div id="tab-operate" class="tab-content hidden flex-1 overflow-y-auto p-3.5 space-y-3.5">
-      <!-- Ignition Start/Stop Button -->
-      <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-        <div>
-          <div class="text-xs font-bold text-white flex items-center gap-2">
-            <span>HV Contactor & Inverter</span>
-            <span id="engine-status-dot" class="w-2 h-2 rounded-full bg-rose-500"></span>
-          </div>
-          <p id="engine-status-text" class="text-[11px] text-slate-400">System Offline (Silent)</p>
-        </div>
-        <button id="btn-engine-power" class="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition flex items-center gap-1.5">
-          <i class="fa-solid fa-power-off"></i>
-          <span id="btn-engine-power-label">Start Engine</span>
-        </button>
-      </div>
-
-      <!-- Interactive Dual Pedals: Brake & Accelerator -->
-      <div class="grid grid-cols-2 gap-2.5">
-        <!-- Brake Pedal -->
-        <button id="btn-pedal-brake" class="pedal-btn select-none p-3 rounded-xl bg-gradient-to-b from-rose-950/90 to-slate-900 border border-rose-500/40 hover:border-rose-400 text-left flex flex-col justify-between h-24 shadow-inner">
-          <div class="flex items-center justify-between w-full">
-            <span class="text-[10px] font-mono-tech uppercase tracking-wider text-rose-400 font-semibold">Hydraulic + Regen</span>
-            <i class="fa-solid fa-circle-stop text-rose-400 text-sm"></i>
-          </div>
-          <div>
-            <div class="text-sm font-extrabold text-white">BRAKE PEDAL</div>
-            <div class="text-[10px] text-slate-400">Hold [B] or Click</div>
-          </div>
-        </button>
-
-        <!-- Accelerator Pedal -->
-        <button id="btn-pedal-accel" class="pedal-btn select-none p-3 rounded-xl bg-gradient-to-b from-emerald-950/90 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 text-left flex flex-col justify-between h-24 shadow-inner">
-          <div class="flex items-center justify-between w-full">
-            <span class="text-[10px] font-mono-tech uppercase tracking-wider text-emerald-400 font-semibold">SiC PWM Throttle</span>
-            <i class="fa-solid fa-gauge-Simple-high text-emerald-400 text-sm"></i>
-          </div>
-          <div>
-            <div class="text-sm font-extrabold text-white">ACCELERATOR</div>
-            <div class="text-[10px] text-slate-400">Hold [Space] / Click</div>
-          </div>
-        </button>
-      </div>
-
-      <!-- Vehicle Acceleration Profile Selector -->
-      <div class="bg-slate-900/75 p-3 rounded-xl border border-slate-800 space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-slate-300">EV Drive Profile (Vehicle Inertia)</span>
-          <span id="profile-target-badge" class="text-[10px] font-mono-tech text-sky-400">0-60 in 5.8s</span>
-        </div>
-        <div class="grid grid-cols-3 gap-1.5">
-          <button data-profile="standard" class="profile-btn active py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/40">
-            Standard (5.8s)
-          </button>
-          <button data-profile="sport" class="profile-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700">
-            Sport AWD (4.2s)
-          </button>
-          <button data-profile="hyper" class="profile-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700">
-            Plaid (2.8s)
-          </button>
-        </div>
-      </div>
-
-      <!-- 0-60 MPH Automated Dyno Sprint -->
-      <div class="bg-slate-900/75 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
-        <div>
-          <div class="text-xs font-bold text-white">0–60 MPH Dyno Pull</div>
-          <div id="sprint-result-text" class="text-[11px] font-mono-tech text-amber-400">Ready for Launch</div>
-        </div>
-        <button id="btn-launch-sprint" class="px-3 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition flex items-center gap-1.5 shadow-md">
-          <i class="fa-solid fa-flag-checkered"></i>
-          <span>Launch 0-60</span>
-        </button>
-      </div>
-
-      <!-- Manual Cruise RPM Slider -->
-      <div class="bg-slate-900/75 p-3 rounded-xl border border-slate-800">
-        <div class="flex justify-between items-center mb-1.5">
-          <span class="text-[11px] font-semibold text-slate-300">Manual Dyno Target RPM</span>
-          <span id="manual-rpm-label" class="text-xs font-mono-tech text-sky-400">0 RPM</span>
-        </div>
-        <input id="slider-rpm" type="range" min="0" max="18000" step="100" value="0">
-      </div>
-    </div>
-  </aside>
-
-  <!-- RIGHT COMPONENT INSPECTOR PANEL -->
-  <aside id="inspector-panel" class="fixed top-20 right-3 w-80 max-w-[calc(100vw-24px)] max-h-[calc(100vh-160px)] z-20 glass-panel rounded-2xl p-4 flex flex-col overflow-y-auto pointer-events-auto transition-all duration-200">
-    <!-- Top Header & Working Close (X) Button -->
-    <div class="flex items-start justify-between gap-2 mb-2">
       <div>
-        <span id="insp-category" class="text-[10px] font-mono-tech font-bold uppercase tracking-widest text-sky-400">ELECTROMAGNETIC ASSEMBLY</span>
-        <h2 id="insp-title" class="text-base font-bold text-white leading-snug mt-0.5">Stator Core & Hairpin Windings</h2>
+        <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Sub-Assemblies (Click to Inspect)</div>
+        <div id="parts-list" class="space-y-1.5"></div>
       </div>
-      <button id="btn-close-inspector" class="w-7 h-7 rounded-lg bg-slate-800/90 hover:bg-rose-500/20 hover:text-rose-300 text-slate-400 flex items-center justify-center border border-slate-700 transition flex-shrink-0" title="Close Inspector">
-        <i class="fa-solid fa-xmark text-sm"></i>
+    </div>
+
+    <!-- Operation / Dyno Panel -->
+    <div id="panel-operate" class="hidden flex-1 overflow-y-auto p-3.5 space-y-3.5">
+      <div class="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-lg p-3">
+        <div>
+          <div class="text-xs font-semibold text-white">High-Voltage Ignition</div>
+          <div id="ignition-status" class="text-[11px] text-slate-400">Inverter Standby (Silent)</div>
+        </div>
+        <button id="btn-power" class="px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition flex items-center gap-1.5">
+          <i data-lucide="power" class="w-4 h-4"></i>
+          <span>START ENGINE</span>
+        </button>
+      </div>
+
+      <!-- Acceleration Profile Selector -->
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-3">
+        <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Vehicle Load Profile (0-60 MPH)</div>
+        <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+          <button data-profile="standard" class="profile-btn py-1.5 px-2 rounded bg-sky-500/20 border border-sky-400/40 text-sky-300 font-semibold">
+            Standard<br><span class="text-[10px] opacity-80">5.8s</span>
+          </button>
+          <button data-profile="sport" class="profile-btn py-1.5 px-2 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            Sport AWD<br><span class="text-[10px] opacity-80">4.2s</span>
+          </button>
+          <button data-profile="hyper" class="profile-btn py-1.5 px-2 rounded bg-slate-800 border border-slate-700 text-slate-300">
+            Plaid Spec<br><span class="text-[10px] opacity-80">2.8s</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Dual Pedals -->
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-brake" class="py-4 rounded-xl bg-rose-950/60 border border-rose-500/40 hover:bg-rose-900/60 active:scale-95 transition flex flex-col items-center justify-center gap-1 text-rose-200">
+          <i data-lucide="octagon" class="w-5 h-5 text-rose-400"></i>
+          <span class="text-xs font-bold">BRAKE PEDAL</span>
+          <span class="text-[10px] text-rose-300/70">Hold [B] or [S]</span>
+        </button>
+        <button id="btn-accel" class="py-4 rounded-xl bg-sky-950/60 border border-sky-400/40 hover:bg-sky-900/60 active:scale-95 transition flex flex-col items-center justify-center gap-1 text-sky-200">
+          <i data-lucide="gauge" class="w-5 h-5 text-sky-400"></i>
+          <span class="text-xs font-bold">ACCELERATOR</span>
+          <span class="text-[10px] text-sky-300/70">Hold [Space] / [W]</span>
+        </button>
+      </div>
+
+      <button id="btn-launch" class="w-full py-2.5 rounded-lg text-xs font-bold bg-gradient-to-r from-sky-500 to-indigo-500 text-white hover:opacity-95 transition flex items-center justify-center gap-2">
+        <i data-lucide="flame" class="w-4 h-4"></i>
+        <span>Auto 0–60 MPH Dyno Pull</span>
+      </button>
+
+      <!-- Live Telemetry -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-3 space-y-2">
+        <div class="flex justify-between items-baseline">
+          <span class="text-[11px] text-slate-400">Simulated Wheel Speed</span>
+          <span class="mono text-xl font-bold text-white"><span id="hud-mph">0</span> <span class="text-xs text-sky-400">MPH</span></span>
+        </div>
+        <div class="flex justify-between items-baseline">
+          <span class="text-[11px] text-slate-400">Rotor Speed (9.05:1 Ratio)</span>
+          <span class="mono text-sm font-semibold text-amber-300"><span id="hud-rpm">0</span> RPM</span>
+        </div>
+        <div class="flex justify-between items-baseline">
+          <span class="text-[11px] text-slate-400">Mechanical Power / Torque</span>
+          <span class="mono text-xs text-emerald-400"><span id="hud-kw">0</span> kW • <span id="hud-nm">0</span> Nm</span>
+        </div>
+        <div class="flex justify-between items-baseline border-t border-slate-800 pt-2">
+          <span class="text-[11px] text-slate-400">0–60 MPH Sprint Timer</span>
+          <span id="hud-timer" class="mono text-xs font-bold text-sky-300">Ready</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Component Inspector Card -->
+  <aside id="inspector-card" class="absolute top-20 right-3 w-88 max-w-sm rounded-xl glass p-4 z-20 space-y-3">
+    <div class="flex items-start justify-between gap-2">
+      <div>
+        <div id="insp-category" class="text-[10px] mono uppercase tracking-wider text-sky-400 font-semibold">MECHANICAL TRANSMISSION</div>
+        <h2 id="insp-title" class="text-base font-bold text-white mt-0.5">Helical Reduction Gearbox (9.05:1)</h2>
+      </div>
+      <button id="btn-close-inspector" title="Close Inspector" class="p-1.5 rounded-lg bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
 
-    <p id="insp-desc" class="text-xs text-slate-300 leading-relaxed mb-3.5">
-      The stationary outer core featuring 48 axial stator slots populated with precision rectangular copper hairpin conductors. Laser-welded crowns boost slot fill density from 45% to over 72%.
+    <p id="insp-desc" class="text-xs text-slate-300 leading-relaxed">
+      Two-stage parallel-axis helical speed reducer with 20° helix angle teeth. Raised on precision workshop V-block pedestals with full air clearance above the stainless steel drip tray.
     </p>
 
-    <!-- Technical Specs Grid -->
-    <div class="grid grid-cols-2 gap-2 mb-3.5">
-      <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-        <div class="text-[10px] font-mono-tech uppercase text-slate-400">MATERIAL</div>
-        <div id="insp-mat" class="text-xs font-semibold text-white mt-0.5">0.25mm Electrical Steel & Cu-OF</div>
+    <div class="grid grid-cols-2 gap-2 text-xs">
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5">
+        <div class="text-[10px] text-slate-400 uppercase">Material</div>
+        <div id="insp-mat" class="font-semibold text-white mt-0.5">Carburized 20MnCr5 Alloy Steel</div>
       </div>
-      <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-        <div class="text-[10px] font-mono-tech uppercase text-slate-400">KEY FUNCTION</div>
-        <div id="insp-func" class="text-xs font-semibold text-sky-400 mt-0.5">Generates Rotating Magnetic Field</div>
-      </div>
-      <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-        <div class="text-[10px] font-mono-tech uppercase text-slate-400">PEAK TEMP RATING</div>
-        <div id="insp-temp" class="text-xs font-semibold text-amber-300 mt-0.5">Class H (180°C continuous)</div>
-      </div>
-      <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-        <div class="text-[10px] font-mono-tech uppercase text-slate-400">EFFICIENCY CONTRIB.</div>
-        <div id="insp-eff" class="text-xs font-semibold text-emerald-400 mt-0.5">>97.8% Peak Conversion</div>
+      <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2.5">
+        <div class="text-[10px] text-slate-400 uppercase">Key Function</div>
+        <div id="insp-func" class="font-semibold text-sky-300 mt-0.5">Multiplies Torque 9.05x to Axles</div>
       </div>
     </div>
 
-    <!-- Physics & Operating Mechanism -->
-    <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800/90 mb-3.5">
-      <div class="text-[11px] font-bold text-sky-300 flex items-center gap-1.5 mb-1">
-        <i class="fa-solid fa-lightbulb text-amber-400"></i>
-        <span>PHYSICS & OPERATING MECHANISM</span>
-      </div>
+    <div class="bg-slate-900/70 border border-slate-800/90 rounded-lg p-3">
+      <div class="text-[10px] font-semibold uppercase tracking-wider text-amber-300 mb-1">Physics & Engineering Detail</div>
       <p id="insp-physics" class="text-[11px] text-slate-300 leading-relaxed">
-        Under 3-phase alternating sinusoidal currents displaced by 120°, Ampère's Law creates a smooth rotating magnetic field across the 0.7mm air gap without physical commutator brushes.
+        Helical teeth engage gradually along an angled contact line, cutting gear whine by 8 dB while stepping down 18,000 RPM rotor speed to ~1,988 RPM at the wheels.
       </p>
     </div>
 
-    <!-- Inspector Action Buttons -->
-    <div class="flex items-center gap-2 mt-auto">
-      <button id="btn-focus-part" class="flex-1 py-2 px-3 rounded-xl bg-sky-600/30 hover:bg-sky-600/50 border border-sky-400/40 text-xs font-semibold text-sky-200 flex items-center justify-center gap-1.5 transition">
-        <i class="fa-solid fa-magnifying-glass-plus"></i>
-        <span>Focus Camera</span>
-      </button>
-      <button id="btn-isolate-part" class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-slate-200 transition">
-        Isolate
+    <div class="flex gap-2 pt-1">
+      <button id="btn-isolate" class="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-200 border border-slate-700 hover:border-sky-400 transition">
+        Isolate Selected Part
       </button>
     </div>
   </aside>
 
-  <!-- BOTTOM LIVE DYNO TELEMETRY COCKPIT HUD -->
-  <footer class="fixed bottom-3 left-1/2 transform -translate-x-1/2 z-20 glass-panel px-5 py-2.5 rounded-2xl flex flex-wrap items-center justify-center gap-5 pointer-events-auto border border-sky-500/25">
-    <!-- Speedometer -->
-    <div class="flex items-baseline gap-2">
-      <span id="hud-mph" class="text-2xl font-extrabold font-mono-tech text-white tracking-tight">0</span>
-      <div class="flex flex-col">
-        <span class="text-[10px] font-mono-tech font-bold text-sky-400 uppercase">MPH</span>
-        <span id="hud-kmh" class="text-[10px] font-mono-tech text-slate-400">0 km/h</span>
-      </div>
-    </div>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-    <div class="h-7 w-px bg-slate-800"></div>
+    lucide.createIcons();
 
-    <!-- Rotor Speed RPM -->
-    <div>
-      <div class="text-[10px] font-mono-tech uppercase text-slate-400">ROTOR RPM</div>
-      <div id="hud-rpm" class="text-sm font-bold font-mono-tech text-emerald-400">0 <span class="text-[10px] text-slate-500">/ 18,000</span></div>
-    </div>
-
-    <div class="h-7 w-px bg-slate-800 hidden sm:block"></div>
-
-    <!-- Mechanical Power & Torque -->
-    <div class="hidden sm:block">
-      <div class="text-[10px] font-mono-tech uppercase text-slate-400">POWER / TORQUE</div>
-      <div class="text-sm font-bold font-mono-tech text-amber-400">
-        <span id="hud-kw">0</span> kW <span class="text-slate-500">|</span> <span id="hud-nm">0</span> Nm
-      </div>
-    </div>
-
-    <div class="h-7 w-px bg-slate-800 hidden md:block"></div>
-
-    <!-- Stator Temp & G-Force -->
-    <div class="hidden md:block">
-      <div class="text-[10px] font-mono-tech uppercase text-slate-400">STATOR TEMP / G-FORCE</div>
-      <div class="text-sm font-bold font-mono-tech text-slate-200">
-        <span id="hud-temp">28°C</span> <span class="text-slate-500">|</span> <span id="hud-gforce" class="text-sky-300">0.00 G</span>
-      </div>
-    </div>
-
-    <!-- Active Brake / Drive Status Badge -->
-    <div id="hud-mode-badge" class="px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-[11px] font-mono-tech font-bold text-slate-400">
-      PARK
-    </div>
-  </footer>
-
-  <!-- GUIDED TOUR OVERLAY BAR (Hidden by default) -->
-  <div id="tour-bar" class="hidden fixed bottom-20 left-1/2 transform -translate-x-1/2 z-30 glass-panel px-5 py-3.5 rounded-2xl w-[520px] max-w-[calc(100vw-24px)] pointer-events-auto border border-emerald-400/40">
-    <div class="flex items-center justify-between mb-1">
-      <span id="tour-step-badge" class="text-[10px] font-mono-tech uppercase font-bold text-emerald-400">STEP 1 OF 7</span>
-      <button id="btn-close-tour" class="text-xs text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i> Exit Tour</button>
-    </div>
-    <h3 id="tour-title" class="text-sm font-bold text-white mb-1">High-Voltage 800V DC Input & SiC Inverter</h3>
-    <p id="tour-text" class="text-xs text-slate-300 leading-relaxed mb-3">
-      Direct current from the battery pack enters the Silicon Carbide (SiC) power module, switching at 12 kHz to synthesize high-current 3-phase AC power.
-    </p>
-    <div class="flex justify-between items-center">
-      <button id="btn-tour-prev" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200">Previous</button>
-      <button id="btn-tour-next" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white">Next Step</button>
-    </div>
-  </div>
-
-  <!-- SAVE / GITHUB REPOSITORY EXPORT MODAL -->
-  <div id="save-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 pointer-events-auto">
-    <div class="glass-panel rounded-2xl max-w-lg w-full p-6 border border-emerald-500/40 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
-            <i class="fa-brands fa-github text-lg"></i>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-white">Keep Your 3D Engine Safe</h3>
-            <p class="text-xs text-slate-400">Export standalone HTML or push to a GitHub Repository</p>
-          </div>
-        </div>
-        <button id="btn-close-save-modal" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <p class="text-xs text-slate-300 leading-relaxed">
-        This entire 3D EV motor, Web Audio synthesizer, and EV Autoshop environment is built inside a single zero-dependency <code class="text-sky-300 font-mono-tech">index.html</code> file. You can download it right now or host it free on <strong>GitHub Pages</strong>:
-      </p>
-
-      <!-- Primary Download Button -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        <button id="btn-download-html" class="py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/50 transition">
-          <i class="fa-solid fa-download"></i>
-          <span>Download index.html</span>
-        </button>
-        <button id="btn-copy-source" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 font-semibold text-xs flex items-center justify-center gap-2 transition">
-          <i class="fa-solid fa-copy"></i>
-          <span id="copy-source-label">Copy Source Code</span>
-        </button>
-      </div>
-
-      <!-- Quick Git Commands for GitHub -->
-      <div class="bg-slate-950/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-mono-tech uppercase text-sky-400 font-semibold">Quick GitHub Repo Setup</span>
-          <span class="text-[10px] text-slate-500">Run in your folder</span>
-        </div>
-        <pre class="text-[11px] font-mono-tech text-slate-300 overflow-x-auto leading-relaxed select-all">git init
-git add index.html
-git commit -m "Add interactive 3D EV Motor & Autoshop"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/3d-ev-motor.git
-git push -u origin main</pre>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAIN APPLICATION & 3D ENGINE SCRIPT -->
-  <script>
-    // ============================================================================
-    // 1. COMPONENT ENGINEERING DATABASE
-    // ============================================================================
-    const ENGINE_COMPONENTS = [
+    // ---------------------------------------------------------
+    // 1. COMPONENT METADATA REGISTRY
+    // ---------------------------------------------------------
+    const COMPONENTS = [
       {
         id: 'housing',
-        name: 'Cast A380 Drive Housing',
+        name: 'Die-Cast Aluminum Outer Housing',
         category: 'STRUCTURAL ENCLOSURE',
-        material: 'Die-Cast A380 Aluminum Alloy',
-        function: 'Structural Rigidity & NVH Shielding',
-        tempRating: '140°C Max Housing Temp',
-        efficiency: '18.4 kg Lightweight Casting',
-        description: 'High-pressure die-cast aluminum enclosure featuring external axial heat-dissipation fins, structural stiffening ribs, and precision-machined M10 perimeter flange bosses.',
-        physics: 'Provides rigid coaxial alignment between the high-speed rotor bearings and helical reduction gears while damping high-frequency electromagnetic stator vibrations.',
-        explodeOffset: new THREE.Vector3(0, 0, -3.6),
-        camPos: new THREE.Vector3(5.5, 3.2, -5.0)
+        desc: 'High-pressure die-cast A380 aluminum stator shell with axial acoustic stiffening ribs and M10 perimeter mounting flanges rested on heavy-duty steel workshop cradles.',
+        material: 'A380 Cast Aluminum Alloy',
+        func: 'Structural Rigidity & NVH Shield',
+        physics: 'Axial ribs shift structural resonance above 4,200 Hz so high-frequency inverter harmonics do not radiate into the cabin.',
+        explodeVec: new THREE.Vector3(0, 0, -2.6),
+        labelOffset: new THREE.Vector3(0, 2.25, -0.5)
       },
       {
         id: 'cooling',
-        name: 'Helical Water-Glycol Jacket',
+        name: 'Helical Glycol Cooling Jacket',
         category: 'THERMAL MANAGEMENT',
-        material: '50/50 Water-Ethylene Glycol Channel',
-        function: 'Extracts up to 14 kW Continuous Heat',
-        tempRating: '65°C Inlet / 82°C Outlet',
-        efficiency: '+4.2% Continuous Power',
-        description: 'Spiral microfluidic cooling channels cast directly around the outer stator diameter with quick-disconnect anodized aluminum inlet and outlet barbs.',
-        physics: 'Forced convective heat transfer removes ohmic I²R copper heat and iron core eddy losses before thermal demagnetization can affect the rotor magnets.',
-        explodeOffset: new THREE.Vector3(0, 0, -1.8),
-        camPos: new THREE.Vector3(4.8, 2.8, -2.5)
+        desc: 'Spiral twin-channel liquid cooling sleeve surrounding the stator outer diameter, circulating 50/50 water-glycol at 18 L/min.',
+        material: '6061-T6 Extruded Aluminum',
+        func: 'Extracts up to 14 kW Heat Load',
+        physics: 'Maintains copper hairpin temperatures safely below the 180°C Class-H insulation breakdown threshold during repeated launches.',
+        explodeVec: new THREE.Vector3(0, 0, -1.4),
+        labelOffset: new THREE.Vector3(0, 1.9, 0.3)
       },
       {
         id: 'stator',
         name: 'Stator Core & Hairpin Windings',
-        category: 'ELECTROMAGNETIC STATOR',
+        category: 'ELECTROMAGNETIC ASSEMBLY',
+        desc: '48-slot laminated electrical steel core populated with rectangular oxygen-free copper hairpin bars and laser-welded end-turn crowns.',
         material: '0.25mm Silicon Steel & Cu-OF',
-        function: 'Generates Rotating Magnetic Field',
-        tempRating: 'Class H (180°C Continuous)',
-        efficiency: '>97.8% Peak Conversion',
-        description: '48-slot laminated electrical steel core wound with flat rectangular oxygen-free copper hairpins and laser-welded end turns insulated with Nomex slot liners.',
-        physics: 'When fed 3-phase sinusoidal AC currents offset by 120°, Ampère’s Law synthesizes a smoothly rotating magnetic flux wave across the 0.7mm air gap.',
-        explodeOffset: new THREE.Vector3(0, 0, 0),
-        camPos: new THREE.Vector3(4.2, 2.5, 1.5)
+        func: 'Creates Rotating Magnetic Field',
+        physics: 'Rectangular flat wire boosts slot copper fill factor from 45% to 72%, lowering DC resistance and I²R heat losses.',
+        explodeVec: new THREE.Vector3(0, 0, 0),
+        labelOffset: new THREE.Vector3(1.85, 1.2, 0)
       },
       {
         id: 'rotor',
-        name: 'IPM V-Magnet Rotor Core',
-        category: 'ROTATING ELECTROMAGNETIC CORE',
-        material: 'NdFeB N52SH Magnets & Carbon Sleeve',
-        function: 'Synchronous + Reluctance Torque',
-        tempRating: '160°C Dysprosium-Doped Rating',
-        efficiency: '520 Nm Peak Motor Torque',
-        description: 'Interior Permanent Magnet (IPM) rotor featuring V-shaped buried Neodymium-Iron-Boron magnets wrapped in a pre-stressed carbon-fiber retention sleeve.',
-        physics: 'Combines permanent magnet alignment torque with magnetic salience (reluctance) torque, allowing safe centrifugal operation up to 18,000 RPM.',
-        explodeOffset: new THREE.Vector3(0, 0, 2.2),
-        camPos: new THREE.Vector3(3.8, 2.0, 3.2)
+        name: 'IPM V-Magnet Rotor & Carbon Sleeve',
+        category: 'ROTATING ASSEMBLY',
+        desc: 'Interior Permanent Magnet rotor with dual-layer V-shaped Neodymium (NdFeB) magnets wrapped in a pre-stressed carbon-fiber retention sleeve.',
+        material: 'NdFeB N48SH + Toray Carbon',
+        func: 'Combines Reluctance & Magnet Torque',
+        physics: 'V-cavity geometry harnesses both permanent magnet alignment torque and salient magnetic reluctance torque up to 18,000 RPM.',
+        explodeVec: new THREE.Vector3(0, 0, 1.65),
+        labelOffset: new THREE.Vector3(0, 0.9, 1.1)
       },
       {
         id: 'shaft',
-        name: 'Hollow Splined Rotor Shaft',
-        category: 'MECHANICAL TRANSMISSION',
-        material: 'Carburized 20MnCr5 Forged Steel',
-        function: 'Transfers Torque to Pinion Gear',
-        tempRating: '220°C Tempered Core',
-        efficiency: '99.6% Direct Mechanical Transfer',
-        description: 'Induction-hardened hollow steel shaft featuring precision involute splines and internal axial ATF oil-cooling rifle drillings.',
-        physics: 'Hollow geometry increases torsional stiffness-to-weight ratio while routing chilled transmission fluid directly through the center of the rotor core.',
-        explodeOffset: new THREE.Vector3(0, 0, 3.8),
-        camPos: new THREE.Vector3(3.5, 1.8, 4.8)
-      },
-      {
-        id: 'bearings',
-        name: 'Hybrid Ceramic Ball Bearings',
-        category: 'HIGH-SPEED ROTATION SUPPORT',
-        material: 'Si3N4 Ceramic Balls / 52100 Races',
-        function: 'Low-Friction 18,000 RPM Support',
-        tempRating: '200°C High-Speed Rated',
-        efficiency: 'Zero Galvanic Fluting Wear',
-        description: 'Silicon nitride (Si3N4) ceramic rolling elements inside hardened steel races supporting both ends of the rotor shaft.',
-        physics: 'Ceramic balls are electrically insulating, blocking high-frequency inverter common-mode voltage from arcing across bearing grease films.',
-        explodeOffset: new THREE.Vector3(0, 0, 4.9),
-        camPos: new THREE.Vector3(3.2, 1.8, 5.5)
+        name: 'Hollow Splined Rotor Shaft & Bearings',
+        category: 'ROTATING DYNAMICS',
+        desc: 'Induction-hardened hollow alloy shaft supported by hybrid ceramic Si3N4 ball bearings that block parasitic EDM bearing currents.',
+        material: '42CrMo4 Steel & Si3N4 Ceramic',
+        func: 'Transfers High-RPM Rotor Torque',
+        physics: 'Silicon nitride ceramic balls act as an electrical insulator, preventing 800V PWM common-mode voltage from pitting the bearing races.',
+        explodeVec: new THREE.Vector3(0, 0, 2.9),
+        labelOffset: new THREE.Vector3(0, -0.5, 1.8)
       },
       {
         id: 'inverter',
         name: '800V Silicon Carbide (SiC) Inverter',
-        category: 'POWER ELECTRONICS MODULE',
-        material: 'SiC MOSFET Power Stage & Cu Busbars',
-        function: 'DC-to-3-Phase AC Conversion',
-        tempRating: '175°C Junction Rating',
-        efficiency: '99.1% Inverter Efficiency',
-        description: 'Top-mounted power electronics housing 800V DC link film capacitors, 3-phase heavy copper busbars, and liquid-cooled SiC MOSFET half-bridge switches.',
-        physics: 'Uses Space Vector Pulse Width Modulation (SVPWM) at 12 kHz carrier frequency to modulate battery DC into variable-frequency, variable-amplitude AC.',
-        explodeOffset: new THREE.Vector3(0, 2.4, 0),
-        camPos: new THREE.Vector3(4.5, 4.8, 2.0)
+        category: 'POWER ELECTRONICS',
+        desc: 'Top-mounted 3-phase power stage housing six 1,200V SiC MOSFET half-bridge power modules, DC-link film capacitor bank, and HV orange busbars.',
+        material: 'SiC Die on Direct-Bonded Copper',
+        func: 'Converts 800V DC to 3-Phase AC',
+        physics: 'Silicon Carbide switches at 10–24 kHz with 75% lower switching losses than legacy silicon IGBTs, extending EV range by 5–7%.',
+        explodeVec: new THREE.Vector3(0, 1.9, 0),
+        labelOffset: new THREE.Vector3(0, 2.75, 0.2)
       },
       {
         id: 'gearbox',
         name: 'Helical Reduction Gearbox (9.05:1)',
-        category: 'TORQUE MULTIPLICATION STAGE',
-        material: 'Case-Hardened 18CrNiMo7-6 Gears',
-        function: 'Multiplies Torque by 9.05x to Axles',
-        tempRating: '130°C Synthetic ATF Bath',
-        efficiency: '98.2% Helical Mesh Efficiency',
-        description: 'Two-stage single-speed helical reduction gearset with a 20° helix angle driving an integrated bevel differential for the left and right half-shafts.',
-        physics: 'Steps down 18,000 RPM motor speed to ~1,988 RPM at the wheels while multiplying 520 Nm rotor torque to over 4,700 Nm at the axle shafts.',
-        explodeOffset: new THREE.Vector3(0, 0, 6.4),
-        camPos: new THREE.Vector3(4.8, 2.2, 6.8)
+        category: 'MECHANICAL TRANSMISSION',
+        desc: 'Two-stage helical gear train stepping down high-RPM rotor speed to high-torque axle rotation, elevated cleanly above the workshop drip pan.',
+        material: 'Carburized 20MnCr5 Gear Steel',
+        func: '9.05:1 Speed Reduction & Diff',
+        physics: '20° involute helical teeth maintain a high contact ratio for whisper-quiet torque multiplication without floor or bench interference.',
+        explodeVec: new THREE.Vector3(0, 0, 4.2),
+        labelOffset: new THREE.Vector3(-1.3, -1.0, 2.35)
       }
     ];
 
-    const TOUR_STEPS = [
-      {
-        partId: 'inverter',
-        title: '1. 800V DC Battery Input & SiC MOSFET Switching',
-        text: 'High-voltage DC power enters through orange shielded cables into the Silicon Carbide (SiC) inverter, switching at 12,000 times per second to synthesize 3-phase AC.'
-      },
-      {
-        partId: 'stator',
-        title: '2. Laser-Welded Copper Hairpins & Rotating Field',
-        text: 'The 3-phase AC currents energize 48 slots of rectangular copper hairpins, creating a smoothly rotating magnetic flux wave around the stator circumference.'
-      },
-      {
-        partId: 'rotor',
-        title: '3. V-Shaped Neodymium IPM Rotor Torque',
-        text: 'Buried N52SH permanent magnets lock onto the stator’s rotating magnetic field, generating both magnetic attraction and reluctance torque up to 18,000 RPM.'
-      },
-      {
-        partId: 'cooling',
-        title: '4. Active Water-Glycol Thermal Extraction',
-        text: 'Chilled water-glycol circulates through the helical aluminum cooling jacket to absorb ohmic copper heat and keep the stator well below 180°C.'
-      },
-      {
-        partId: 'bearings',
-        title: '5. Ceramic-Insulated High-Speed Bearings',
-        text: 'Silicon nitride ceramic balls support the rotor at 300 revolutions per second while preventing electrical bearing current erosion.'
-      },
-      {
-        partId: 'shaft',
-        title: '6. Hollow Splined Rotor Output Shaft',
-        text: 'Mechanical rotation flows through the induction-hardened hollow steel shaft directly into the input pinion of the reduction transmission.'
-      },
-      {
-        partId: 'gearbox',
-        title: '7. 9.05:1 Helical Gear Reduction to Wheels',
-        text: 'Precision 20° helical gears multiply motor torque by 9.05x, delivering instant, silent acceleration directly to the vehicle half-shafts.'
-      }
-    ];
-
-    // ============================================================================
-    // 2. THREE.JS SCENE, CAMERA & RENDERER INITIALIZATION
-    // ============================================================================
+    // ---------------------------------------------------------
+    // 2. THREE.JS SCENE, CAMERA & RENDERER
+    // ---------------------------------------------------------
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x060a12);
-    scene.fog = new THREE.FogExp2(0x060a12, 0.022);
+    scene.background = new THREE.Color(0x12161f);
+    scene.fog = new THREE.FogExp2(0x12161f, 0.022);
 
-    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 120);
-    camera.position.set(6.4, 3.6, 5.8);
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 150);
+    camera.position.set(6.2, 2.6, 6.8);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.localClippingEnabled = true;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.15;
+    renderer.localClippingEnabled = true;
     container.appendChild(renderer.domElement);
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
+    controls.target.set(0, 0.15, 0.5);
+    controls.maxPolarAngle = Math.PI * 0.52; // Prevent camera going underneath the workshop floor
+    controls.minDistance = 2.4;
     controls.maxDistance = 22;
-    controls.minDistance = 2.0;
-    controls.maxPolarAngle = Math.PI * 0.49;
-    controls.target.set(0, 0.2, 0.4);
 
-    // ============================================================================
-    // 3. PROCEDURAL STUDIO HDR ENVIRONMENT & PBR TEXTURES
-    // ============================================================================
-    function createStudioEnvMap() {
-      const pmremGenerator = new THREE.PMREMGenerator(renderer);
-      pmremGenerator.compileEquirectangularShader();
-      const envScene = new THREE.Scene();
-      envScene.background = new THREE.Color(0x0f172a);
-
-      const ceilingLight = new THREE.Mesh(
-        new THREE.PlaneGeometry(20, 20),
-        new THREE.MeshBasicMaterial({ color: 0xffffff })
-      );
-      ceilingLight.position.set(0, 10, 0);
-      ceilingLight.rotation.x = Math.PI / 2;
-      envScene.add(ceilingLight);
-
-      const cyanStrip = new THREE.Mesh(
-        new THREE.PlaneGeometry(16, 4),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
-      );
-      cyanStrip.position.set(-10, 4, 0);
-      cyanStrip.rotation.y = Math.PI / 2;
-      envScene.add(cyanStrip);
-
-      const warmStrip = new THREE.Mesh(
-        new THREE.PlaneGeometry(16, 4),
-        new THREE.MeshBasicMaterial({ color: 0xf59e0b })
-      );
-      warmStrip.position.set(10, 3, 0);
-      warmStrip.rotation.y = -Math.PI / 2;
-      envScene.add(warmStrip);
-
-      const envRT = pmremGenerator.fromScene(envScene, 0.04);
-      scene.environment = envRT.texture;
-      pmremGenerator.dispose();
-    }
-    createStudioEnvMap();
-
-    function generateLaminationTexture() {
+    // ---------------------------------------------------------
+    // 3. PROCEDURAL TEXTURES & PBR MATERIALS (INITIALIZED FIRST)
+    // ---------------------------------------------------------
+    function createLaminationTexture() {
       const c = document.createElement('canvas');
-      c.width = 256;
-      c.height = 256;
+      c.width = 256; c.height = 256;
       const ctx = c.getContext('2d');
-      for (let y = 0; y < 256; y++) {
-        const shade = (y % 3 === 0) ? 45 : 95 + Math.floor(Math.random() * 15);
-        ctx.fillStyle = `rgb(${shade}, ${shade + 4}, ${shade + 10})`;
-        ctx.fillRect(0, y, 256, 1);
+      for (let y = 0; y < 256; y += 2) {
+        ctx.fillStyle = y % 4 === 0 ? '#475569' : '#1e293b';
+        ctx.fillRect(0, y, 256, 2);
       }
       const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(4, 18);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(4, 14);
       return tex;
     }
 
-    function generateCastAluminumNormal() {
+    function createCarbonTexture() {
       const c = document.createElement('canvas');
-      c.width = 256;
-      c.height = 256;
+      c.width = 64; c.height = 64;
       const ctx = c.getContext('2d');
-      const imgData = ctx.createImageData(256, 256);
-      for (let i = 0; i < imgData.data.length; i += 4) {
-        const n = 120 + Math.floor(Math.random() * 16);
-        imgData.data[i] = n;
-        imgData.data[i + 1] = n;
-        imgData.data[i + 2] = 255;
-        imgData.data[i + 3] = 255;
-      }
-      ctx.putImageData(imgData, 0, 0);
-      const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(8, 8);
-      return tex;
-    }
-
-    function generateCarbonFiberTexture() {
-      const c = document.createElement('canvas');
-      c.width = 64;
-      c.height = 64;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#111827';
+      ctx.fillStyle = '#0f172a';
       ctx.fillRect(0, 0, 64, 64);
-      ctx.fillStyle = '#1f2937';
-      for (let y = 0; y < 64; y += 8) {
-        for (let x = 0; x < 64; x += 8) {
-          if ((x + y) % 16 === 0) ctx.fillRect(x, y, 7, 4);
-          else ctx.fillRect(x, y + 4, 7, 4);
-        }
-      }
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(0, 0, 32, 32);
+      ctx.fillRect(32, 32, 32, 32);
       const tex = new THREE.CanvasTexture(c);
-      tex.wrapS = THREE.RepeatWrapping;
-      tex.wrapT = THREE.RepeatWrapping;
-      tex.repeat.set(16, 8);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(18, 18);
       return tex;
     }
 
-    const laminationTex = generateLaminationTexture();
-    const castAlumNormal = generateCastAluminumNormal();
-    const carbonFiberTex = generateCarbonFiberTexture();
+    const clipPlane = new THREE.Plane(new THREE.Vector3(-1, -0.25, 0).normalize(), 100);
 
-    // ============================================================================
-    // 4. LIGHTING, CLIPPING PLANES & PBR MATERIALS (INITIALIZED BEFORE SCENE MESHES)
-    // ============================================================================
-    const ambientLight = new THREE.AmbientLight(0xd1e7ff, 0.72);
-    scene.add(ambientLight);
-
-    const mainKeyLight = new THREE.DirectionalLight(0xffffff, 2.4);
-    mainKeyLight.position.set(8, 13, 8);
-    mainKeyLight.castShadow = true;
-    mainKeyLight.shadow.mapSize.width = 2048;
-    mainKeyLight.shadow.mapSize.height = 2048;
-    mainKeyLight.shadow.bias = -0.0004;
-    scene.add(mainKeyLight);
-
-    const cyanRimLight = new THREE.DirectionalLight(0x38bdf8, 2.2);
-    cyanRimLight.position.set(-9, 5, -8);
-    scene.add(cyanRimLight);
-
-    const warmFillLight = new THREE.DirectionalLight(0xffedd5, 1.2);
-    warmFillLight.position.set(-5, -3, 6);
-    scene.add(warmFillLight);
-
-    // CAD Section Cutaway Plane
-    const clipPlaneY = new THREE.Plane(new THREE.Vector3(-1, 1, 0).normalize(), 100);
-    const engineClipPlanes = [clipPlaneY];
-
-    // PBR Materials Registry
     const mats = {
-      steelLaminations: new THREE.MeshStandardMaterial({
-        color: 0x475569,
-        metalness: 0.88,
-        roughness: 0.32,
-        map: laminationTex,
-        bumpMap: laminationTex,
-        bumpScale: 0.02,
-        clippingPlanes: engineClipPlanes
+      castAlum: new THREE.MeshStandardMaterial({
+        color: 0x94a3b8, metalness: 0.78, roughness: 0.34, clippingPlanes: [clipPlane], clipShadows: true
       }),
-      copperHairpin: new THREE.MeshStandardMaterial({
-        color: 0xe07a1f,
-        metalness: 0.95,
-        roughness: 0.16,
-        clippingPlanes: engineClipPlanes
+      darkAlum: new THREE.MeshStandardMaterial({
+        color: 0x334155, metalness: 0.8, roughness: 0.38, clippingPlanes: [clipPlane], clipShadows: true
       }),
-      copperWeldTip: new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        metalness: 0.98,
-        roughness: 0.12,
-        emissive: 0x78350f,
-        emissiveIntensity: 0.15,
-        clippingPlanes: engineClipPlanes
+      laminations: new THREE.MeshStandardMaterial({
+        color: 0x64748b, metalness: 0.86, roughness: 0.3, map: createLaminationTexture(), clippingPlanes: [clipPlane]
       }),
-      nomexInsulation: new THREE.MeshStandardMaterial({
-        color: 0xfef08a,
-        metalness: 0.05,
-        roughness: 0.75,
-        clippingPlanes: engineClipPlanes
+      copper: new THREE.MeshStandardMaterial({
+        color: 0xe87928, metalness: 0.95, roughness: 0.16, clippingPlanes: [clipPlane]
       }),
-      castAluminum: new THREE.MeshStandardMaterial({
-        color: 0x94a3b8,
-        metalness: 0.74,
-        roughness: 0.38,
-        normalMap: castAlumNormal,
-        normalScale: new THREE.Vector2(0.3, 0.3),
-        clippingPlanes: engineClipPlanes
+      copperWeld: new THREE.MeshStandardMaterial({
+        color: 0xfbbf24, metalness: 0.96, roughness: 0.12, clippingPlanes: [clipPlane]
       }),
-      castAluminumDark: new THREE.MeshStandardMaterial({
-        color: 0x334155,
-        metalness: 0.78,
-        roughness: 0.36,
-        normalMap: castAlumNormal,
-        normalScale: new THREE.Vector2(0.25, 0.25),
-        clippingPlanes: engineClipPlanes
+      coolant: new THREE.MeshPhysicalMaterial({
+        color: 0x06b6d4, emissive: 0x0891b2, emissiveIntensity: 0.35, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.86, clippingPlanes: [clipPlane]
       }),
-      coolantFluid: new THREE.MeshPhysicalMaterial({
-        color: 0x06b6d4,
-        emissive: 0x0891b2,
-        emissiveIntensity: 0.4,
-        metalness: 0.1,
-        roughness: 0.08,
-        transmission: 0.65,
-        transparent: true,
-        opacity: 0.85,
-        clippingPlanes: engineClipPlanes
+      magnetN: new THREE.MeshStandardMaterial({
+        color: 0xef4444, metalness: 0.75, roughness: 0.25, clippingPlanes: [clipPlane]
       }),
-      magnetNorth: new THREE.MeshStandardMaterial({
-        color: 0xef4444,
-        metalness: 0.8,
-        roughness: 0.28
+      magnetS: new THREE.MeshStandardMaterial({
+        color: 0x3b82f6, metalness: 0.75, roughness: 0.25, clippingPlanes: [clipPlane]
       }),
-      magnetSouth: new THREE.MeshStandardMaterial({
-        color: 0x2563eb,
-        metalness: 0.8,
-        roughness: 0.28
+      carbon: new THREE.MeshStandardMaterial({
+        color: 0x1e293b, map: createCarbonTexture(), metalness: 0.4, roughness: 0.35, clippingPlanes: [clipPlane]
       }),
-      carbonSleeve: new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        map: carbonFiberTex,
-        metalness: 0.45,
-        roughness: 0.38,
-        clippingPlanes: engineClipPlanes
+      hardSteel: new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0, metalness: 0.94, roughness: 0.16
       }),
-      hardenedShaft: new THREE.MeshStandardMaterial({
-        color: 0xe2e8f0,
-        metalness: 0.96,
-        roughness: 0.14
-      }),
-      bearingSteel: new THREE.MeshStandardMaterial({
-        color: 0xf8fafc,
-        metalness: 0.98,
-        roughness: 0.08
-      }),
-      ceramicBall: new THREE.MeshStandardMaterial({
-        color: 0x1e293b,
-        metalness: 0.2,
-        roughness: 0.05
-      }),
-      brassGold: new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        metalness: 0.88,
-        roughness: 0.24
-      }),
-      hexBoltSteel: new THREE.MeshStandardMaterial({
-        color: 0xcfd8dc,
-        metalness: 0.95,
-        roughness: 0.2
-      }),
-      inverterCircuit: new THREE.MeshStandardMaterial({
-        color: 0x065f46,
-        metalness: 0.35,
-        roughness: 0.55
-      }),
-      sicChip: new THREE.MeshStandardMaterial({
-        color: 0x0f172a,
-        metalness: 0.9,
-        roughness: 0.15
+      gearSteel: new THREE.MeshStandardMaterial({
+        color: 0xcbd5e1, metalness: 0.92, roughness: 0.2
       }),
       hvOrange: new THREE.MeshStandardMaterial({
-        color: 0xf97316,
-        roughness: 0.4,
-        metalness: 0.15
-      })
+        color: 0xf97316, metalness: 0.15, roughness: 0.35
+      }),
+      pcbGreen: new THREE.MeshStandardMaterial({
+        color: 0x065f46, metalness: 0.4, roughness: 0.45, clippingPlanes: [clipPlane]
+      }),
+      sicChip: new THREE.MeshStandardMaterial({
+        color: 0x0f172a, metalness: 0.9, roughness: 0.15
+      }),
+      // Workshop Materials (never clipped by cutaway)
+      benchSteel: new THREE.MeshStandardMaterial({ color: 0x262f3d, metalness: 0.65, roughness: 0.42 }),
+      dripTraySteel: new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.88, roughness: 0.24 }),
+      cradleBlue: new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.55, roughness: 0.38 }),
+      rubberPad: new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.05, roughness: 0.85 }),
+      toolRed: new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.6, roughness: 0.32 }),
+      wallDark: new THREE.MeshStandardMaterial({ color: 0x181e29, metalness: 0.2, roughness: 0.75 }),
+      pegboardMat: new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.45, roughness: 0.55 }),
+      shopFloor: new THREE.MeshStandardMaterial({ color: 0x141821, metalness: 0.15, roughness: 0.7 })
     };
 
-    function tagComponentMesh(mesh, compId) {
-      mesh.userData = { componentId: compId };
+    // ---------------------------------------------------------
+    // 4. LIGHTING (WARM ENGINE WORKSHOP + TASK BAR LIGHT)
+    // ---------------------------------------------------------
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.65);
+    scene.add(ambientLight);
+
+    const overheadTaskLight = new THREE.DirectionalLight(0xfff7ed, 2.7);
+    overheadTaskLight.position.set(4.5, 9.5, 5.5);
+    overheadTaskLight.castShadow = true;
+    overheadTaskLight.shadow.mapSize.set(2048, 2048);
+    overheadTaskLight.shadow.camera.near = 1;
+    overheadTaskLight.shadow.camera.far = 25;
+    const d = 7.5;
+    overheadTaskLight.shadow.camera.left = -d;
+    overheadTaskLight.shadow.camera.right = d;
+    overheadTaskLight.shadow.camera.top = d;
+    overheadTaskLight.shadow.camera.bottom = -d;
+    overheadTaskLight.shadow.bias = -0.0005;
+    scene.add(overheadTaskLight);
+
+    const benchFillLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+    benchFillLight.position.set(-6, 3.5, -4);
+    scene.add(benchFillLight);
+
+    // ---------------------------------------------------------
+    // 5. COMPACT ENGINE WORKSHOP ENVIRONMENT (NO BURIED GEARS)
+    // ---------------------------------------------------------
+    // CRITICAL GEOMETRY CLEARANCE MATH:
+    // Motor Centerline is raised to Y = +0.55.
+    // The lowest point of the Helical Reduction Gearbox output ring gear is at local Y = -2.42,
+    // which in world space sits at Y = +0.55 - 2.42 = -1.87.
+    // The Workshop Table top is placed at Y = -2.35, giving 0.48 units of clean visible air space
+    // underneath the lowest gear teeth!
+    const MOTOR_CENTER_Y = 0.55;
+    const BENCH_TOP_Y = -2.35;
+
+    const workshopGroup = new THREE.Group();
+    scene.add(workshopGroup);
+
+    function buildCompactEngineWorkshop() {
+      // 1. Heavy-Duty Steel Engine Workbench Top (Y = -2.35 to -2.55)
+      const benchTop = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.22, 6.2), mats.benchSteel);
+      benchTop.position.set(0, BENCH_TOP_Y - 0.11, 0.4);
+      benchTop.receiveShadow = true;
+      benchTop.castShadow = true;
+      workshopGroup.add(benchTop);
+
+      // 2. Recessed Brushed Stainless Steel Drip Pan on the Workbench Surface
+      const dripPan = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.03, 4.4), mats.dripTraySteel);
+      dripPan.position.set(0, BENCH_TOP_Y + 0.015, 0.45);
+      dripPan.receiveShadow = true;
+      workshopGroup.add(dripPan);
+
+      // 3. Heavy-Duty Engine Cradle Pedestals (Support the Stator Housing & Gearbox with Full Gear Clearance)
+      // Front and rear machined V-block stands rising from BENCH_TOP_Y (-2.35) up to the housing belly
+      const cradleZPositions = [-0.95, 0.85];
+      cradleZPositions.forEach((zPos) => {
+        const pedestalGroup = new THREE.Group();
+        // Rubber anti-vibration base pad
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.08, 0.58), mats.rubberPad);
+        pad.position.set(0, BENCH_TOP_Y + 0.04, zPos);
+        pedestalGroup.add(pad);
+
+        // Blue powder-coated steel crossbeam
+        const baseBeam = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.24, 0.46), mats.cradleBlue);
+        baseBeam.position.set(0, BENCH_TOP_Y + 0.20, zPos);
+        baseBeam.castShadow = true;
+        baseBeam.receiveShadow = true;
+        pedestalGroup.add(baseBeam);
+
+        // Left & Right Vertical Cradle Towers supporting the cylindrical motor housing
+        [-1.15, 1.15].forEach((xSide) => {
+          const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.36, 1.55, 0.42), mats.cradleBlue);
+          pillar.position.set(xSide, BENCH_TOP_Y + 1.05, zPos);
+          pillar.castShadow = true;
+          pillar.receiveShadow = true;
+          pedestalGroup.add(pillar);
+
+          // Machined steel saddle jaw at top of pillar
+          const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.22, 0.46), mats.hardSteel);
+          jaw.position.set(xSide * 0.92, BENCH_TOP_Y + 1.85, zPos);
+          jaw.rotation.z = xSide > 0 ? 0.42 : -0.42;
+          pedestalGroup.add(jaw);
+        });
+
+        workshopGroup.add(pedestalGroup);
+      });
+
+      // 4. Four Square-Tube Workbench Legs + Lower Storage Shelf
+      const legOffsets = [
+        [-4.2, -2.3], [4.2, -2.3],
+        [-4.2, 3.1], [4.2, 3.1]
+      ];
+      legOffsets.forEach(([lx, lz]) => {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 2.6, 0.24), mats.benchSteel);
+        leg.position.set(lx, BENCH_TOP_Y - 1.4, lz);
+        leg.castShadow = true;
+        workshopGroup.add(leg);
+      });
+
+      // Matte Dark Concrete Workshop Floor (No bright 3D wireframe grid!)
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 28), mats.shopFloor);
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = BENCH_TOP_Y - 2.7;
+      floor.receiveShadow = true;
+      workshopGroup.add(floor);
+
+      // 5. Workshop Tool Pegboard Backboard Behind the Bench
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(9.2, 4.4, 0.16), mats.pegboardMat);
+      backWall.position.set(0, BENCH_TOP_Y + 2.1, -2.65);
+      backWall.receiveShadow = true;
+      workshopGroup.add(backWall);
+
+      // Top LED Shop Light Bar suspended over the engine
+      const lightHood = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.14, 0.55), mats.benchSteel);
+      lightHood.position.set(0, BENCH_TOP_Y + 4.35, 0.2);
+      workshopGroup.add(lightHood);
+
+      const ledDiffuser = new THREE.Mesh(
+        new THREE.PlaneGeometry(5.1, 0.42),
+        new THREE.MeshBasicMaterial({ color: 0xf8fafc })
+      );
+      ledDiffuser.rotation.x = Math.PI / 2;
+      ledDiffuser.position.set(0, BENCH_TOP_Y + 4.27, 0.2);
+      workshopGroup.add(ledDiffuser);
+
+      // 6. Hanging Workshop Wrenches & Parts Bins on the Backboard
+      for (let i = 0; i < 6; i++) {
+        const wrench = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.55 + i * 0.06, 0.03), mats.hardSteel);
+        wrench.position.set(-3.4 + i * 0.26, BENCH_TOP_Y + 2.55, -2.53);
+        workshopGroup.add(wrench);
+      }
+
+      // Small Blue & Yellow Bolt Organizer Bins on Pegboard
+      for (let b = 0; b < 4; b++) {
+        const bin = new THREE.Mesh(
+          new THREE.BoxGeometry(0.48, 0.32, 0.36),
+          b % 2 === 0 ? mats.cradleBlue : mats.hvOrange
+        );
+        bin.position.set(1.8 + b * 0.58, BENCH_TOP_Y + 2.4, -2.42);
+        workshopGroup.add(bin);
+      }
+
+      // 7. Rolling Red Mechanic Tool Chest on Left Corner of Bench
+      const toolBox = new THREE.Mesh(new THREE.BoxGeometry(1.55, 1.05, 1.15), mats.toolRed);
+      toolBox.position.set(-3.55, BENCH_TOP_Y + 0.525, -1.35);
+      toolBox.castShadow = true;
+      workshopGroup.add(toolBox);
+
+      for (let dIdx = 0; dIdx < 4; dIdx++) {
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.04, 0.04), mats.hardSteel);
+        handle.position.set(-3.55, BENCH_TOP_Y + 0.22 + dIdx * 0.22, -0.76);
+        workshopGroup.add(handle);
+      }
+
+      // 8. Benchtop EV Oscilloscope / Diagnostic Monitor on Right Corner
+      const scopeStand = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 0.35), mats.darkAlum);
+      scopeStand.position.set(3.45, BENCH_TOP_Y + 0.22, -1.25);
+      workshopGroup.add(scopeStand);
+
+      const scopeBody = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.88, 0.16), mats.darkAlum);
+      scopeBody.position.set(3.45, BENCH_TOP_Y + 0.78, -1.25);
+      scopeBody.rotation.y = -0.35;
+      scopeBody.castShadow = true;
+      workshopGroup.add(scopeBody);
+
+      const scopeScreen = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.18, 0.7),
+        new THREE.MeshBasicMaterial({ color: 0x0ea5e9 })
+      );
+      scopeScreen.position.set(0, 0, 0.085);
+      scopeBody.add(scopeScreen);
+    }
+
+    buildCompactEngineWorkshop();
+
+    // ---------------------------------------------------------
+    // 6. BUILD THE 3D EV MOTOR & HELICAL REDUCTION GEARBOX
+    // ---------------------------------------------------------
+    const motorRoot = new THREE.Group();
+    motorRoot.position.y = MOTOR_CENTER_Y; // Elevated so gears clear the workbench!
+    scene.add(motorRoot);
+
+    const partGroups = {};
+    const clickableMeshes = [];
+    const rotatingParts = [];
+
+    function registerMesh(mesh, compId) {
+      mesh.userData.componentId = compId;
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      clickableMeshes.push(mesh);
+      return mesh;
     }
 
-    function createHexBolt() {
-      const boltGroup = new THREE.Group();
-      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.045, 6), mats.hexBoltSteel);
-      const flange = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.015, 16), mats.hexBoltSteel);
-      flange.position.y = -0.02;
-      boltGroup.add(head, flange);
-      return boltGroup;
+    // Helper for Helical/Spur Gear Wheel
+    function createGearWheel(radius, thickness, teethCount, mat, compId, helixSign = 1) {
+      const g = new THREE.Group();
+      const core = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.88, radius * 0.88, thickness, 40), mat),
+        compId
+      );
+      core.rotation.x = Math.PI / 2;
+      g.add(core);
+
+      const hub = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.42, radius * 0.42, thickness * 1.18, 28), mats.darkAlum),
+        compId
+      );
+      hub.rotation.x = Math.PI / 2;
+      g.add(hub);
+
+      const toothGeo = new THREE.BoxGeometry(
+        (2 * Math.PI * radius) / (teethCount * 2.1),
+        radius * 0.19,
+        thickness * 0.96
+      );
+      for (let i = 0; i < teethCount; i++) {
+        const a = (i / teethCount) * Math.PI * 2;
+        const t = registerMesh(new THREE.Mesh(toothGeo, mat), compId);
+        t.position.set(Math.cos(a) * (radius * 0.93), Math.sin(a) * (radius * 0.93), 0);
+        t.rotation.z = a - Math.PI / 2;
+        t.rotation.y = helixSign * 0.28; // 20-deg helical tooth angle
+        g.add(t);
+      }
+      return g;
     }
 
-    // ============================================================================
-    // 5. 3D EV AUTOSHOP DIAGNOSTIC BAY ENVIRONMENT
-    // ============================================================================
-    const autoshopGroup = new THREE.Group();
-    scene.add(autoshopGroup);
-
-    function buildEVAutoshopEnvironment() {
-      // 1. Polished Epoxy Floor with HV Safety Hazard Perimeter
-      const floorCanvas = document.createElement('canvas');
-      floorCanvas.width = 1024;
-      floorCanvas.height = 1024;
-      const fctx = floorCanvas.getContext('2d');
-      fctx.fillStyle = '#0b1322';
-      fctx.fillRect(0, 0, 1024, 1024);
-
-      // Tile Grid
-      fctx.strokeStyle = '#162238';
-      fctx.lineWidth = 3;
-      for (let i = 0; i <= 1024; i += 64) {
-        fctx.beginPath(); fctx.moveTo(i, 0); fctx.lineTo(i, 1024); fctx.stroke();
-        fctx.beginPath(); fctx.moveTo(0, i); fctx.lineTo(1024, i); fctx.stroke();
-      }
-
-      // Yellow/Black High-Voltage Dyno Bay Safety Box
-      fctx.strokeStyle = '#eab308';
-      fctx.lineWidth = 14;
-      fctx.strokeRect(240, 240, 544, 544);
-
-      const floorTex = new THREE.CanvasTexture(floorCanvas);
-      const floorMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(32, 32),
-        new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.22, metalness: 0.3 })
-      );
-      floorMesh.rotation.x = -Math.PI / 2;
-      floorMesh.position.y = -2.5;
-      floorMesh.receiveShadow = true;
-      autoshopGroup.add(floorMesh);
-
-      // 2. Heavy Cast-Iron Dyno Test Pedestal Under Engine
-      const benchTop = new THREE.Mesh(
-        new THREE.BoxGeometry(3.8, 0.22, 6.2),
-        mats.castAluminumDark
-      );
-      benchTop.position.set(0, -1.65, 0.5);
-      benchTop.receiveShadow = true;
-      autoshopGroup.add(benchTop);
-
-      // Four Dyno Bench Legs
-      const legCoords = [[-1.6, -2.2], [1.6, -2.2], [-1.6, 3.2], [1.6, 3.2]];
-      legCoords.forEach(([lx, lz]) => {
-        const leg = new THREE.Mesh(
-          new THREE.BoxGeometry(0.28, 0.85, 0.28),
-          new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.4 })
-        );
-        leg.position.set(lx, -2.1, lz);
-        autoshopGroup.add(leg);
-      });
-
-      // V-Block Mounting Cradles Holding the Motor
-      [-1.0, 1.0].forEach(zPos => {
-        const cradle = new THREE.Mesh(
-          new THREE.BoxGeometry(2.1, 0.45, 0.32),
-          mats.castAluminum
-        );
-        cradle.position.set(0, -1.35, zPos);
-        autoshopGroup.add(cradle);
-      });
-
-      // 3. Two-Post Yellow Hydraulic EV Service Lift Columns
-      const liftYellowMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.45, roughness: 0.35 });
-      [-5.8, 5.8].forEach(xSide => {
-        const column = new THREE.Mesh(new THREE.BoxGeometry(0.55, 6.5, 0.55), liftYellowMat);
-        column.position.set(xSide, 0.75, -1.5);
-        column.castShadow = true;
-        autoshopGroup.add(column);
-
-        const basePlate = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 1.1), mats.castAluminumDark);
-        basePlate.position.set(xSide, -2.44, -1.5);
-        autoshopGroup.add(basePlate);
-      });
-
-      // Overhead Lift Crossbeam
-      const topBeam = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.35, 0.45), liftYellowMat);
-      topBeam.position.set(0, 4.1, -1.5);
-      autoshopGroup.add(topBeam);
-
-      // 4. Rolling Red EV High-Voltage Tool Chest (Left Side)
-      const chestMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, metalness: 0.6, roughness: 0.28 });
-      const toolChest = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.7, 2.6), chestMat);
-      toolChest.position.set(-4.5, -1.55, 2.2);
-      toolChest.castShadow = true;
-      autoshopGroup.add(toolChest);
-
-      // Silver Drawer Pulls
-      for (let d = 0; d < 5; d++) {
-        const pull = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 2.2), mats.hardenedShaft);
-        pull.position.set(-3.78, -0.95 - d * 0.28, 2.2);
-        autoshopGroup.add(pull);
-      }
-
-      // 5. Mobile 800V Diagnostic Oscilloscope Cart (Right Side)
-      const cartBody = new THREE.Mesh(
-        new THREE.BoxGeometry(1.3, 1.5, 1.6),
-        new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.35 })
-      );
-      cartBody.position.set(4.2, -1.65, 1.4);
-      autoshopGroup.add(cartBody);
-
-      // Glowing Oscilloscope Screen
-      const screenCanvas = document.createElement('canvas');
-      screenCanvas.width = 512;
-      screenCanvas.height = 256;
-      const sctx = screenCanvas.getContext('2d');
-      sctx.fillStyle = '#020617';
-      sctx.fillRect(0, 0, 512, 256);
-      sctx.strokeStyle = '#0ea5e9';
-      sctx.lineWidth = 4;
-      sctx.beginPath();
-      for (let x = 0; x < 512; x++) {
-        const y = 128 + Math.sin(x * 0.06) * 55;
-        if (x === 0) sctx.moveTo(x, y); else sctx.lineTo(x, y);
-      }
-      sctx.stroke();
-      sctx.fillStyle = '#38bdf8';
-      sctx.font = 'bold 22px monospace';
-      sctx.fillText('800V SiC PWM ANALYZER - READY', 24, 36);
-
-      const monitor = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.35, 0.78),
-        new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(screenCanvas), side: THREE.DoubleSide })
-      );
-      monitor.position.set(4.0, -0.35, 1.4);
-      monitor.rotation.y = -Math.PI * 0.62;
-      autoshopGroup.add(monitor);
-
-      // Orange High-Voltage Umbilical Cable from Diagnostic Cart to Engine Inverter
-      const cableCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(3.6, -1.1, 1.2),
-        new THREE.Vector3(2.4, -1.8, 0.8),
-        new THREE.Vector3(1.2, -0.4, 0.1),
-        new THREE.Vector3(0.45, 1.38, -0.4)
-      ]);
-      const hvUmbilical = new THREE.Mesh(
-        new THREE.TubeGeometry(cableCurve, 32, 0.045, 12, false),
-        mats.hvOrange
-      );
-      autoshopGroup.add(hvUmbilical);
-
-      // 6. Overhead Detailers Hexagonal LED Ceiling Grid
-      const hexMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
-      for (let row = -1; row <= 1; row++) {
-        const hexRing = new THREE.Mesh(new THREE.RingGeometry(1.5, 1.62, 6), hexMat);
-        hexRing.rotation.x = Math.PI / 2;
-        hexRing.position.set(row * 3.4, 5.4, 0.5);
-        autoshopGroup.add(hexRing);
-      }
-    }
-    buildEVAutoshopEnvironment();
-
-    // ============================================================================
-    // 6. PROCEDURAL 3D CAD MODEL: EV TRACTION DRIVE UNIT
-    // ============================================================================
-    const masterEngineGroup = new THREE.Group();
-    scene.add(masterEngineGroup);
-
-    const componentGroups = {};
-    const rotatingRotorGroup = new THREE.Group();
-    const rotatingGearGroup = new THREE.Group();
-
-    ENGINE_COMPONENTS.forEach(comp => {
+    COMPONENTS.forEach((c) => {
       const grp = new THREE.Group();
-      grp.name = comp.id;
-      componentGroups[comp.id] = grp;
-      masterEngineGroup.add(grp);
+      grp.userData = { id: c.id, basePos: new THREE.Vector3(0, 0, 0), explodeVec: c.explodeVec };
+      partGroups[c.id] = grp;
+      motorRoot.add(grp);
     });
 
-    // ----------------------------------------------------------------------------
-    // PART 1: CAST A380 ALUMINUM DRIVE HOUSING (housing)
-    // ----------------------------------------------------------------------------
-    (function buildHousing() {
-      const grp = componentGroups['housing'];
-      const barrelGeo = new THREE.CylinderGeometry(1.38, 1.38, 2.35, 48, 1, true);
-      barrelGeo.rotateX(Math.PI / 2);
-      const barrel = new THREE.Mesh(barrelGeo, mats.castAluminum);
-      tagComponentMesh(barrel, 'housing');
-      grp.add(barrel);
+    // (A) DIE-CAST ALUMINUM HOUSING
+    {
+      const id = 'housing';
+      const g = partGroups[id];
+      const shell = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(1.78, 1.78, 2.75, 48, 1, true), mats.castAlum),
+        id
+      );
+      shell.rotation.x = Math.PI / 2;
+      g.add(shell);
 
-      // 24 Axial Cooling & Structural Fins around Outer Barrel
+      // Axial cooling/stiffening fins around outer shell
       for (let i = 0; i < 24; i++) {
-        const angle = (i / 24) * Math.PI * 2;
-        if (angle > 1.15 && angle < 1.98) continue; // Leave top flat for Inverter Mount
-        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.14, 2.25), mats.castAluminum);
-        fin.position.set(Math.cos(angle) * 1.43, Math.sin(angle) * 1.43, 0);
-        fin.rotation.z = angle + Math.PI / 2;
-        tagComponentMesh(fin, 'housing');
-        grp.add(fin);
+        const ang = (i / 24) * Math.PI * 2;
+        if (Math.abs(Math.sin(ang)) > 0.92 && Math.sin(ang) > 0) continue; // Flat top pad for inverter
+        const fin = registerMesh(
+          new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 2.65), mats.castAlum),
+          id
+        );
+        fin.position.set(Math.cos(ang) * 1.83, Math.sin(ang) * 1.83, 0);
+        fin.rotation.z = ang - Math.PI / 2;
+        g.add(fin);
       }
 
-      // Rear Endbell & Perimeter M10 Flange Bolts
-      const endBellGeo = new THREE.CylinderGeometry(1.42, 1.42, 0.16, 48);
-      endBellGeo.rotateX(Math.PI / 2);
-      const endBell = new THREE.Mesh(endBellGeo, mats.castAluminumDark);
-      endBell.position.z = -1.22;
-      tagComponentMesh(endBell, 'housing');
-      grp.add(endBell);
-
-      for (let i = 0; i < 12; i++) {
-        const a = (i / 12) * Math.PI * 2;
-        const bolt = createHexBolt();
-        bolt.rotation.x = -Math.PI / 2;
-        bolt.position.set(Math.cos(a) * 1.28, Math.sin(a) * 1.28, -1.32);
-        grp.add(bolt);
-      }
-    })();
-
-    // ----------------------------------------------------------------------------
-    // PART 2: HELICAL WATER-GLYCOL COOLING JACKET (cooling)
-    // ----------------------------------------------------------------------------
-    (function buildCoolingJacket() {
-      const grp = componentGroups['cooling'];
-      // Spiral Microfluidic Coolant Coil
-      const spiralPoints = [];
-      const turns = 7;
-      for (let i = 0; i <= 180; i++) {
-        const t = i / 180;
-        const angle = t * Math.PI * 2 * turns;
-        const z = -0.95 + t * 1.9;
-        spiralPoints.push(new THREE.Vector3(Math.cos(angle) * 1.24, Math.sin(angle) * 1.24, z));
-      }
-      const spiralCurve = new THREE.CatmullRomCurve3(spiralPoints);
-      const coilMesh = new THREE.Mesh(
-        new THREE.TubeGeometry(spiralCurve, 220, 0.052, 12, false),
-        mats.coolantFluid
+      // Rear Endbell Cap
+      const rearBell = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(1.82, 1.82, 0.22, 48), mats.darkAlum),
+        id
       );
-      tagComponentMesh(coilMesh, 'cooling');
-      grp.add(coilMesh);
+      rearBell.rotation.x = Math.PI / 2;
+      rearBell.position.z = -1.45;
+      g.add(rearBell);
+    }
 
-      // Coolant Inlet / Outlet Quick-Disconnect Barbs
-      [-0.75, 0.75].forEach(zBarb => {
-        const barb = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.42, 16), mats.coolantFluid);
-        barb.rotation.z = Math.PI / 2;
-        barb.position.set(-1.45, 0, zBarb);
-        tagComponentMesh(barb, 'cooling');
-        grp.add(barb);
-      });
-    })();
+    // (B) HELICAL GLYCOL COOLING JACKET
+    {
+      const id = 'cooling';
+      const g = partGroups[id];
+      const sleeve = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.62, 2.35, 48, 1, true), mats.coolant),
+        id
+      );
+      sleeve.rotation.x = Math.PI / 2;
+      g.add(sleeve);
 
-    // ----------------------------------------------------------------------------
-    // PART 3: LAMINATED STATOR CORE & 48 LASER-WELDED COPPER HAIRPINS (stator)
-    // ----------------------------------------------------------------------------
-    (function buildStator() {
-      const grp = componentGroups['stator'];
-      // Outer Stator Lamination Stack Ring
-      const statorOuterShape = new THREE.Shape();
-      statorOuterShape.absarc(0, 0, 1.18, 0, Math.PI * 2, false);
-      const statorHolePath = new THREE.Path();
-      statorHolePath.absarc(0, 0, 0.82, 0, Math.PI * 2, true);
-      statorOuterShape.holes.push(statorHolePath);
-
-      const statorExtrude = new THREE.ExtrudeGeometry(statorOuterShape, {
-        depth: 1.9,
-        bevelEnabled: false,
-        curveSegments: 48
-      });
-      statorExtrude.translate(0, 0, -0.95);
-      const statorCore = new THREE.Mesh(statorExtrude, mats.steelLaminations);
-      tagComponentMesh(statorCore, 'stator');
-      grp.add(statorCore);
-
-      // 48 Stator Teeth, Nomex Insulation Liners & Rectangular Copper Hairpins
-      const slotCount = 48;
-      for (let i = 0; i < slotCount; i++) {
-        const angle = (i / slotCount) * Math.PI * 2;
-        const cosA = Math.cos(angle);
-        const sinA = Math.sin(angle);
-
-        // Stator Tooth
-        const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.18, 1.9), mats.steelLaminations);
-        tooth.position.set(cosA * 0.76, sinA * 0.76, 0);
-        tooth.rotation.z = angle + Math.PI / 2;
-        tagComponentMesh(tooth, 'stator');
-        grp.add(tooth);
-
-        // Copper Hairpin Conductor Bar + Front/Rear Crowns
-        const pinAngle = angle + (Math.PI / slotCount);
-        const pCos = Math.cos(pinAngle);
-        const pSin = Math.sin(pinAngle);
-
-        const hairpinBar = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.11, 2.38), mats.copperHairpin);
-        hairpinBar.position.set(pCos * 0.80, pSin * 0.80, 0);
-        hairpinBar.rotation.z = pinAngle + Math.PI / 2;
-        tagComponentMesh(hairpinBar, 'stator');
-        grp.add(hairpinBar);
-
-        // Laser-Welded End-Turn Tips (Front & Rear)
-        const weldTipF = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.09, 0.12), mats.copperWeldTip);
-        weldTipF.position.set(pCos * 0.81, pSin * 0.81, 1.22);
-        weldTipF.rotation.z = pinAngle + Math.PI / 3;
-        tagComponentMesh(weldTipF, 'stator');
-        grp.add(weldTipF);
-
-        const weldTipR = weldTipF.clone();
-        weldTipR.position.z = -1.22;
-        weldTipR.rotation.z = pinAngle - Math.PI / 3;
-        tagComponentMesh(weldTipR, 'stator');
-        grp.add(weldTipR);
+      for (let i = -4; i <= 4; i++) {
+        const ring = registerMesh(
+          new THREE.Mesh(new THREE.TorusGeometry(1.63, 0.045, 16, 48), mats.coolant),
+          id
+        );
+        ring.position.z = i * 0.24;
+        g.add(ring);
       }
-    })();
+    }
 
-    // ----------------------------------------------------------------------------
-    // PART 4: IPM V-SHAPED NEODYMIUM MAGNET ROTOR (rotor)
-    // ----------------------------------------------------------------------------
-    (function buildRotor() {
-      const grp = componentGroups['rotor'];
-      grp.add(rotatingRotorGroup);
+    // (C) STATOR CORE & COPPER HAIRPIN WINDINGS
+    {
+      const id = 'stator';
+      const g = partGroups[id];
+      const core = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.52, 2.1, 48, 1, true), mats.laminations),
+        id
+      );
+      core.rotation.x = Math.PI / 2;
+      g.add(core);
 
-      // Rotor Silicon Steel Core
-      const rotorGeo = new THREE.CylinderGeometry(0.64, 0.64, 1.86, 40);
-      rotorGeo.rotateX(Math.PI / 2);
-      const rotorMesh = new THREE.Mesh(rotorGeo, mats.steelLaminations);
-      tagComponentMesh(rotorMesh, 'rotor');
-      rotatingRotorGroup.add(rotorMesh);
+      // 48 Copper Hairpin End-Windings & Laser-Welded Crowns
+      for (let i = 0; i < 48; i++) {
+        const a = (i / 48) * Math.PI * 2;
+        const r = 1.27;
+        const pinFront = registerMesh(
+          new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.12, 0.42), mats.copper),
+          id
+        );
+        pinFront.position.set(Math.cos(a) * r, Math.sin(a) * r, 1.15);
+        pinFront.rotation.z = a - Math.PI / 2;
+        g.add(pinFront);
 
-      // Pre-stressed Carbon-Fiber Overwrap Retention Sleeve
-      const sleeveGeo = new THREE.CylinderGeometry(0.652, 0.652, 1.84, 40, 1, true);
-      sleeveGeo.rotateX(Math.PI / 2);
-      const sleeveMesh = new THREE.Mesh(sleeveGeo, mats.carbonSleeve);
-      tagComponentMesh(sleeveMesh, 'rotor');
-      rotatingRotorGroup.add(sleeveMesh);
+        const weldTip = registerMesh(
+          new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.13, 0.09), mats.copperWeld),
+          id
+        );
+        weldTip.position.set(Math.cos(a) * r, Math.sin(a) * r, 1.38);
+        weldTip.rotation.z = a - Math.PI / 2;
+        g.add(weldTip);
 
-      // 8-Pole Buried V-Shaped NdFeB Permanent Magnets (Red North / Blue South)
-      const poles = 8;
-      for (let p = 0; p < poles; p++) {
-        const pAngle = (p / poles) * Math.PI * 2;
-        const matPole = (p % 2 === 0) ? mats.magnetNorth : mats.magnetSouth;
-
-        [-1, 1].forEach(side => {
-          const mag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.18, 1.88), matPole);
-          const offsetAngle = pAngle + side * 0.11;
-          mag.position.set(Math.cos(offsetAngle) * 0.51, Math.sin(offsetAngle) * 0.51, 0);
-          mag.rotation.z = pAngle + Math.PI / 2 + (side * 0.42);
-          tagComponentMesh(mag, 'rotor');
-          rotatingRotorGroup.add(mag);
-        });
+        const pinRear = pinFront.clone();
+        pinRear.position.z = -1.15;
+        g.add(pinRear);
       }
-    })();
+    }
 
-    // ----------------------------------------------------------------------------
-    // PART 5: HOLLOW SPLINED ROTOR OUTPUT SHAFT (shaft)
-    // ----------------------------------------------------------------------------
-    (function buildShaft() {
-      const grp = componentGroups['shaft'];
-      const shaftGeo = new THREE.CylinderGeometry(0.22, 0.22, 3.6, 32);
-      shaftGeo.rotateX(Math.PI / 2);
-      const shaftMesh = new THREE.Mesh(shaftGeo, mats.hardenedShaft);
-      shaftMesh.position.z = 0.35;
-      tagComponentMesh(shaftMesh, 'shaft');
-      grp.add(shaftMesh);
+    // (D) IPM V-MAGNET ROTOR & CARBON SLEEVE
+    const rotorSpinGroup = new THREE.Group();
+    {
+      const id = 'rotor';
+      const g = partGroups[id];
+      g.add(rotorSpinGroup);
 
-      // Output Involute Splines
-      for (let s = 0; s < 12; s++) {
-        const sAngle = (s / 12) * Math.PI * 2;
-        const spline = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.9), mats.hardenedShaft);
-        spline.position.set(Math.cos(sAngle) * 0.22, Math.sin(sAngle) * 0.22, 1.65);
-        spline.rotation.z = sAngle;
-        tagComponentMesh(spline, 'shaft');
-        grp.add(spline);
-      }
-    })();
+      const rotorBody = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(1.04, 1.04, 2.05, 40), mats.laminations),
+        id
+      );
+      rotorBody.rotation.x = Math.PI / 2;
+      rotorSpinGroup.add(rotorBody);
 
-    // ----------------------------------------------------------------------------
-    // PART 6: HYBRID CERAMIC BALL BEARINGS (bearings)
-    // ----------------------------------------------------------------------------
-    (function buildBearings() {
-      const grp = componentGroups['bearings'];
-      [-1.15, 1.15].forEach(zPos => {
-        const bGroup = new THREE.Group();
-        bGroup.position.z = zPos;
+      const carbonWrap = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(1.06, 1.06, 2.02, 40, 1, true), mats.carbon),
+        id
+      );
+      carbonWrap.rotation.x = Math.PI / 2;
+      rotorSpinGroup.add(carbonWrap);
 
-        const outerRace = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.045, 16, 36), mats.bearingSteel);
-        const innerRace = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.04, 16, 36), mats.bearingSteel);
-        tagComponentMesh(outerRace, 'bearings');
-        tagComponentMesh(innerRace, 'bearings');
-        bGroup.add(outerRace, innerRace);
-
-        // 14 Silicon Nitride (Si3N4) Black Ceramic Balls
-        for (let b = 0; b < 14; b++) {
-          const bAngle = (b / 14) * Math.PI * 2;
-          const ball = new THREE.Mesh(new THREE.SphereGeometry(0.046, 16, 16), mats.ceramicBall);
-          ball.position.set(Math.cos(bAngle) * 0.315, Math.sin(bAngle) * 0.315, 0);
-          tagComponentMesh(ball, 'bearings');
-          bGroup.add(ball);
-        }
-        grp.add(bGroup);
-      });
-    })();
-
-    // ----------------------------------------------------------------------------
-    // PART 7: 800V SILICON CARBIDE (SiC) POWER INVERTER MODULE (inverter)
-    // ----------------------------------------------------------------------------
-    (function buildInverter() {
-      const grp = componentGroups['inverter'];
-      // Cast Aluminum Inverter Base Tray
-      const tray = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.36, 1.95), mats.castAluminumDark);
-      tray.position.set(0, 1.48, 0);
-      tagComponentMesh(tray, 'inverter');
-      grp.add(tray);
-
-      // Green Gate-Driver PCB & 6 Silicon Carbide Half-Bridge Power Dies
-      const pcb = new THREE.Mesh(new THREE.BoxGeometry(1.52, 0.04, 1.72), mats.inverterCircuit);
-      pcb.position.set(0, 1.68, 0);
-      tagComponentMesh(pcb, 'inverter');
-      grp.add(pcb);
-
-      for (let row = -1; row <= 1; row++) {
-        [-0.36, 0.36].forEach(col => {
-          const sicMod = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.38), mats.sicChip);
-          sicMod.position.set(col, 1.73, row * 0.48);
-          tagComponentMesh(sicMod, 'inverter');
-          grp.add(sicMod);
-        });
-      }
-
-      // 3-Phase Heavy Copper Output Busbars (U, V, W)
-      [-0.35, 0, 0.35].forEach(xBus => {
-        const busbar = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.38, 0.04), mats.copperHairpin);
-        busbar.position.set(xBus, 1.35, 0.85);
-        tagComponentMesh(busbar, 'inverter');
-        grp.add(busbar);
-      });
-
-      // High-Voltage Orange 800V DC Input Gland Connectors
-      [-0.28, 0.28].forEach(xPlug => {
-        const hvPlug = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.35, 16), mats.hvOrange);
-        hvPlug.rotation.x = Math.PI / 2;
-        hvPlug.position.set(xPlug, 1.52, -1.08);
-        tagComponentMesh(hvPlug, 'inverter');
-        grp.add(hvPlug);
-      });
-    })();
-
-    // ----------------------------------------------------------------------------
-    // PART 8: SINGLE-SPEED HELICAL REDUCTION GEARBOX (gearbox)
-    // ----------------------------------------------------------------------------
-    (function buildGearbox() {
-      const grp = componentGroups['gearbox'];
-      grp.add(rotatingGearGroup);
-
-      function createHelicalGear(radius, thickness, teethCount, compId) {
-        const gearGrp = new THREE.Group();
-        const bodyGeo = new THREE.CylinderGeometry(radius, radius, thickness, 36);
-        bodyGeo.rotateX(Math.PI / 2);
-        const body = new THREE.Mesh(bodyGeo, mats.hardenedShaft);
-        tagComponentMesh(body, compId);
-        gearGrp.add(body);
-
-        for (let t = 0; t < teethCount; t++) {
-          const a = (t / teethCount) * Math.PI * 2;
-          const tooth = new THREE.Mesh(
-            new THREE.BoxGeometry(0.048, 0.095, thickness * 0.96),
-            mats.hardenedShaft
+      // 8-Pole V-Shaped Neodymium Magnets on Rotor Face
+      for (let p = 0; p < 8; p++) {
+        const a = (p / 8) * Math.PI * 2;
+        const magMat = p % 2 === 0 ? mats.magnetN : mats.magnetS;
+        [-0.28, 0.28].forEach((vTilt, idx) => {
+          const mag = registerMesh(
+            new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.34, 2.08), magMat),
+            id
           );
-          tooth.position.set(Math.cos(a) * radius, Math.sin(a) * radius, 0);
-          tooth.rotation.z = a + Math.PI / 2;
-          tooth.rotation.x = 0.28; // 20° Helical tooth angle
-          tagComponentMesh(tooth, compId);
-          gearGrp.add(tooth);
-        }
-        return gearGrp;
+          const rad = 0.78;
+          mag.position.set(
+            Math.cos(a + (idx === 0 ? -0.11 : 0.11)) * rad,
+            Math.sin(a + (idx === 0 ? -0.11 : 0.11)) * rad,
+            0
+          );
+          mag.rotation.z = a + vTilt;
+          rotorSpinGroup.add(mag);
+        });
       }
+      rotatingParts.push({ mesh: rotorSpinGroup, ratio: 1.0 });
+    }
 
-      // Stage 1 Input Pinion Gear (Coaxial with Rotor Shaft)
-      const pinionGear = createHelicalGear(0.32, 0.34, 16, 'gearbox');
-      pinionGear.position.set(0, 0, 1.65);
-      pinionGear.name = 'pinionGear';
-      rotatingGearGroup.add(pinionGear);
+    // (E) HOLLOW SPLINED ROTOR SHAFT & CERAMIC BEARINGS
+    const shaftSpinGroup = new THREE.Group();
+    {
+      const id = 'shaft';
+      const g = partGroups[id];
+      g.add(shaftSpinGroup);
 
-      // Stage 2 Intermediate Countershaft Gear
-      const counterGear = createHelicalGear(0.68, 0.32, 32, 'gearbox');
-      counterGear.position.set(0.75, -0.58, 1.65);
-      counterGear.name = 'counterGear';
-      rotatingGearGroup.add(counterGear);
-
-      // Stage 3 Final Output Differential Ring Gear
-      const diffRingGear = createHelicalGear(0.95, 0.38, 42, 'gearbox');
-      diffRingGear.position.set(0.15, -1.05, 2.05);
-      diffRingGear.name = 'diffRingGear';
-      rotatingGearGroup.add(diffRingGear);
-    })();
-
-    // ============================================================================
-    // 7. ELECTROMAGNETIC ROTATING FLUX FIELD VISUALIZER
-    // ============================================================================
-    const fluxParticleGroup = new THREE.Group();
-    masterEngineGroup.add(fluxParticleGroup);
-
-    const fluxRingCount = 36;
-    const fluxMeshes = [];
-    for (let i = 0; i < fluxRingCount; i++) {
-      const a = (i / fluxRingCount) * Math.PI * 2;
-      const orb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.032, 8, 8),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 })
+      const shaft = registerMesh(
+        new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 3.65, 32), mats.hardSteel),
+        id
       );
-      orb.position.set(Math.cos(a) * 0.71, Math.sin(a) * 0.71, (i % 3 - 1) * 0.55);
-      fluxParticleGroup.add(orb);
-      fluxMeshes.push({ mesh: orb, baseAngle: a });
+      shaft.rotation.x = Math.PI / 2;
+      shaft.position.z = 0.25;
+      shaftSpinGroup.add(shaft);
+
+      // Front & Rear Ceramic Ball Bearings
+      [-1.15, 1.25].forEach((bz) => {
+        const race = registerMesh(
+          new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.09, 16, 36), mats.hardSteel),
+          id
+        );
+        race.position.z = bz;
+        shaftSpinGroup.add(race);
+      });
+      rotatingParts.push({ mesh: shaftSpinGroup, ratio: 1.0 });
     }
 
-    // ============================================================================
-    // 8. ZERO-LEAK WEB AUDIO SYNTHESIZER (NO BEEP WHEN ENGINE IS OFF)
-    // ============================================================================
-    let audioCtx = null;
-    let engineMasterGain = null;
-    let inverterOsc = null;
-    let inverterGain = null;
-    let statorHarmonicOsc = null;
-    let statorGain = null;
-    let gearMeshOsc = null;
-    let gearGain = null;
+    // (F) 800V SILICON CARBIDE (SiC) INVERTER MODULE
+    {
+      const id = 'inverter';
+      const g = partGroups[id];
+      const invBox = registerMesh(
+        new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.56, 2.15), mats.castAlum),
+        id
+      );
+      invBox.position.set(0, 1.98, -0.05);
+      g.add(invBox);
 
-    function ensureAudioContext() {
-      if (!audioCtx) {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContextClass();
+      const pcb = registerMesh(
+        new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.08, 1.85), mats.pcbGreen),
+        id
+      );
+      pcb.position.set(0, 2.28, -0.05);
+      g.add(pcb);
 
-        // Master Engine Bus starts strictly at 0.0 gain (completely silent when OFF)
-        engineMasterGain = audioCtx.createGain();
-        engineMasterGain.gain.value = 0.0;
-        engineMasterGain.connect(audioCtx.destination);
-
-        // 1. SiC Inverter Carrier Whine (High-Pitch PWM Sine)
-        inverterOsc = audioCtx.createOscillator();
-        inverterOsc.type = 'sine';
-        inverterOsc.frequency.value = 8800;
-        inverterGain = audioCtx.createGain();
-        inverterGain.gain.value = 0.0;
-        inverterOsc.connect(inverterGain);
-        inverterGain.connect(engineMasterGain);
-        inverterOsc.start();
-
-        // 2. Electromagnetic Stator Order Pitch (Triangle Harmonic)
-        statorHarmonicOsc = audioCtx.createOscillator();
-        statorHarmonicOsc.type = 'triangle';
-        statorHarmonicOsc.frequency.value = 110;
-        statorGain = audioCtx.createGain();
-        statorGain.gain.value = 0.0;
-        statorHarmonicOsc.connect(statorGain);
-        statorGain.connect(engineMasterGain);
-        statorHarmonicOsc.start();
-
-        // 3. Helical Gear Mesh Whir (Sawtooth Filtered)
-        gearMeshOsc = audioCtx.createOscillator();
-        gearMeshOsc.type = 'sawtooth';
-        gearMeshOsc.frequency.value = 180;
-        const lowpass = audioCtx.createBiquadFilter();
-        lowpass.type = 'lowpass';
-        lowpass.frequency.value = 950;
-        gearGain = audioCtx.createGain();
-        gearGain.gain.value = 0.0;
-        gearMeshOsc.connect(lowpass);
-        lowpass.connect(gearGain);
-        gearGain.connect(engineMasterGain);
-        gearMeshOsc.start();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    function playContactorClack(turningOn) {
-      ensureAudioContext();
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(turningOn ? 180 : 140, now);
-      osc.frequency.exponentialRampToValueAtTime(42, now + 0.065);
-      g.gain.setValueAtTime(0.22, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
-      osc.connect(g);
-      g.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.075);
-    }
-
-    function playBrakeCaliperSound() {
-      if (!audioCtx) return;
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(110, now);
-      osc.frequency.exponentialRampToValueAtTime(38, now + 0.09);
-      g.gain.setValueAtTime(0.14, now);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.095);
-      osc.connect(g);
-      g.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.1);
-    }
-
-    function updateEngineAudio(isRunning, rpm, throttleLoad) {
-      if (!audioCtx || !engineMasterGain) return;
-      const now = audioCtx.currentTime;
-
-      // STRICT SILENCE WHEN ENGINE IS OFF (Eliminates residual beep)
-      if (!isRunning) {
-        engineMasterGain.gain.setTargetAtTime(0.0, now, 0.03);
-        inverterGain.gain.setTargetAtTime(0.0, now, 0.02);
-        statorGain.gain.setTargetAtTime(0.0, now, 0.02);
-        gearGain.gain.setTargetAtTime(0.0, now, 0.02);
-        return;
-      }
-
-      engineMasterGain.gain.setTargetAtTime(0.65, now, 0.05);
-      const normRpm = Math.min(rpm / 18000, 1.0);
-
-      // Only play inverter carrier whine when spinning or under throttle
-      const invVol = (rpm > 20 || throttleLoad > 0.05)
-        ? (0.006 + normRpm * 0.018 + throttleLoad * 0.015)
-        : 0.0;
-      inverterOsc.frequency.setTargetAtTime(8500 + normRpm * 3200, now, 0.04);
-      inverterGain.gain.setTargetAtTime(invVol, now, 0.04);
-
-      // Electromagnetic stator pitch
-      const statVol = (rpm > 10) ? (0.015 + normRpm * 0.09 + throttleLoad * 0.06) : 0.0;
-      statorHarmonicOsc.frequency.setTargetAtTime(65 + normRpm * 920, now, 0.04);
-      statorGain.gain.setTargetAtTime(statVol, now, 0.04);
-
-      // Helical gearbox mesh whir
-      const gVol = (rpm > 30) ? (normRpm * 0.065) : 0.0;
-      gearMeshOsc.frequency.setTargetAtTime(110 + normRpm * 1450, now, 0.04);
-      gearGain.gain.setTargetAtTime(gVol, now, 0.04);
-    }
-
-    // ============================================================================
-    // 9. INTERACTION, RAYCASTING & INSPECTOR UX (FIXED NO ACCIDENTAL POPUP)
-    // ============================================================================
-    let selectedComponentId = 'stator';
-    let isolatedComponentId = null;
-    let inspectorManuallyClosed = false;
-    let isThermalMode = false;
-    let isFluxVisible = true;
-    let isCutawayActive = false;
-
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    let pointerDownPos = { x: 0, y: 0 };
-    const hoverTooltip = document.getElementById('hover-tooltip');
-
-    renderer.domElement.addEventListener('pointerdown', e => {
-      pointerDownPos.x = e.clientX;
-      pointerDownPos.y = e.clientY;
-    });
-
-    renderer.domElement.addEventListener('pointermove', e => {
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(masterEngineGroup.children, true);
-      const hit = intersects.find(i => i.object.userData && i.object.userData.componentId);
-
-      if (hit) {
-        const comp = ENGINE_COMPONENTS.find(c => c.id === hit.object.userData.componentId);
-        if (comp) {
-          hoverTooltip.textContent = comp.name;
-          hoverTooltip.style.left = `${e.clientX}px`;
-          hoverTooltip.style.top = `${e.clientY}px`;
-          hoverTooltip.classList.remove('hidden');
-          renderer.domElement.style.cursor = 'pointer';
-          return;
+      // 6 SiC MOSFET Power Switches
+      for (let sx = -1; sx <= 1; sx++) {
+        for (let sz = -0.5; sz <= 0.5; sz += 1) {
+          const chip = registerMesh(
+            new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.08, 0.52), mats.sicChip),
+            id
+          );
+          chip.position.set(sx * 0.62, 2.34, sz * 0.62 - 0.05);
+          g.add(chip);
         }
       }
-      hoverTooltip.classList.add('hidden');
-      renderer.domElement.style.cursor = 'grab';
+
+      // High-Voltage Orange Busbar Connectors
+      [-0.55, 0.55].forEach((bx) => {
+        const hvPlug = registerMesh(
+          new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.48, 20), mats.hvOrange),
+          id
+        );
+        hvPlug.rotation.x = Math.PI / 2;
+        hvPlug.position.set(bx, 1.98, -1.32);
+        g.add(hvPlug);
+      });
+    }
+
+    // (G) HELICAL REDUCTION GEARBOX (9.05:1) - PROPORTIONED & ELEVATED ABOVE BENCH!
+    {
+      const id = 'gearbox';
+      const g = partGroups[id];
+
+      // 1. Input Pinion on Rotor Shaft (Z = 1.72, Y = 0)
+      const inputPinion = createGearWheel(0.46, 0.44, 18, mats.gearSteel, id, 1);
+      inputPinion.position.set(0, 0, 1.72);
+      g.add(inputPinion);
+      rotatingParts.push({ mesh: inputPinion, ratio: 1.0 });
+
+      // 2. Intermediate Compound Idler Gear (Meshed cleanly below/left of Pinion)
+      const idlerGear = createGearWheel(0.86, 0.42, 32, mats.gearSteel, id, -1);
+      idlerGear.position.set(-0.62, -0.68, 1.72);
+      g.add(idlerGear);
+      rotatingParts.push({ mesh: idlerGear, ratio: -18 / 32 });
+
+      // Secondary Small Pinion on Idler Shaft
+      const idlerSmall = createGearWheel(0.44, 0.42, 16, mats.gearSteel, id, 1);
+      idlerSmall.position.set(-0.62, -0.68, 2.18);
+      g.add(idlerSmall);
+      rotatingParts.push({ mesh: idlerSmall, ratio: -18 / 32 });
+
+      // 3. Final Output Differential Ring Gear (Center at Y = -1.18, Radius = 1.12 -> Bottom at local Y = -2.30)
+      // Since motorRoot.position.y = +0.55, the bottom of this gear sits at World Y = -1.75,
+      // which is a full 0.60 units ABOVE the workbench top (Y = -2.35)! Zero floor clipping!
+      const outputGear = createGearWheel(1.12, 0.48, 42, mats.gearSteel, id, -1);
+      outputGear.position.set(0.32, -1.18, 2.18);
+      g.add(outputGear);
+      rotatingParts.push({ mesh: outputGear, ratio: (18 / 32) * (16 / 42) });
+    }
+
+    // ---------------------------------------------------------
+    // 7. 3D CALLOUT LABELS & INSPECTOR INTERACTION
+    // ---------------------------------------------------------
+    const labelsContainer = document.getElementById('labels-container');
+    const labelEls = {};
+    let labelsVisible = true;
+    let selectedCompId = 'gearbox';
+    let isolatedCompId = null;
+
+    const partsListEl = document.getElementById('parts-list');
+    COMPONENTS.forEach((comp) => {
+      // Create Floating 3D Pill
+      const pill = document.createElement('div');
+      pill.className = 'hotspot-label absolute px-2.5 py-1 rounded-full glass text-[11px] font-medium text-sky-200 border border-sky-400/40 shadow-lg whitespace-nowrap';
+      pill.textContent = comp.name;
+      pill.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectComponent(comp.id, true);
+      });
+      labelsContainer.appendChild(pill);
+      labelEls[comp.id] = pill;
+
+      // Create Sidebar List Item
+      const item = document.createElement('button');
+      item.id = `part-btn-${comp.id}`;
+      item.className = 'w-full text-left px-3 py-2 rounded-lg text-xs font-medium bg-slate-900/70 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-between';
+      item.innerHTML = `<span>${comp.name}</span><i data-lucide="chevron-right" class="w-3.5 h-3.5 opacity-60"></i>`;
+      item.addEventListener('click', () => selectComponent(comp.id, true));
+      partsListEl.appendChild(item);
     });
+    lucide.createIcons();
 
-    // Click vs Orbit Drag Guard: Only select if mouse moved < 5px
-    renderer.domElement.addEventListener('pointerup', e => {
-      const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
-      if (dist > 5) return; // User was orbiting/rotating the 3D view
-
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(masterEngineGroup.children, true);
-      const hit = intersects.find(i => i.object.userData && i.object.userData.componentId);
-
-      if (hit) {
-        // Select part without snapping camera or forcing closed inspector open
-        selectComponent(hit.object.userData.componentId, false, false);
-      }
-    });
-
-    function selectComponent(compId, moveCamera = false, forceOpenInspector = false) {
-      selectedComponentId = compId;
-      const comp = ENGINE_COMPONENTS.find(c => c.id === compId);
+    function selectComponent(compId, openInspector = true) {
+      selectedCompId = compId;
+      const comp = COMPONENTS.find((c) => c.id === compId);
       if (!comp) return;
 
-      // Update Inspector Text
       document.getElementById('insp-category').textContent = comp.category;
       document.getElementById('insp-title').textContent = comp.name;
-      document.getElementById('insp-desc').textContent = comp.description;
+      document.getElementById('insp-desc').textContent = comp.desc;
       document.getElementById('insp-mat').textContent = comp.material;
-      document.getElementById('insp-func').textContent = comp.function;
-      document.getElementById('insp-temp').textContent = comp.tempRating;
-      document.getElementById('insp-eff').textContent = comp.efficiency;
+      document.getElementById('insp-func').textContent = comp.func;
       document.getElementById('insp-physics').textContent = comp.physics;
 
-      // Highlight active button in Left Sidebar
-      document.querySelectorAll('.part-list-item').forEach(btn => {
-        const isCurrent = btn.dataset.partId === compId;
-        btn.classList.toggle('border-sky-400', isCurrent);
-        btn.classList.toggle('bg-sky-500/15', isCurrent);
+      COMPONENTS.forEach((c) => {
+        const btn = document.getElementById(`part-btn-${c.id}`);
+        if (btn) {
+          btn.className = c.id === compId
+            ? 'w-full text-left px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/40 transition flex items-center justify-between'
+            : 'w-full text-left px-3 py-2 rounded-lg text-xs font-medium bg-slate-900/70 hover:bg-slate-800 text-slate-300 border border-slate-800 transition flex items-center justify-between';
+        }
       });
 
-      if (forceOpenInspector) {
-        inspectorManuallyClosed = false;
-        document.getElementById('inspector-panel').classList.remove('hidden');
+      if (openInspector) {
+        document.getElementById('inspector-card').classList.remove('hidden');
         document.getElementById('btn-show-inspector').classList.add('hidden');
-      }
-
-      if (moveCamera && comp.camPos) {
-        animateCameraTo(comp.camPos, new THREE.Vector3(0, 0.2, 0.4));
       }
     }
 
-    // Build Left Sidebar Parts Directory
-    const partsListContainer = document.getElementById('parts-list-container');
-    ENGINE_COMPONENTS.forEach(comp => {
-      const btn = document.createElement('button');
-      btn.dataset.partId = comp.id;
-      btn.className = 'part-list-item w-full text-left p-2.5 rounded-xl bg-slate-900/75 hover:bg-slate-800/90 border border-slate-800 transition flex items-center justify-between group';
-      btn.innerHTML = `
-        <div>
-          <div class="text-xs font-semibold text-slate-200 group-hover:text-sky-300">${comp.name}</div>
-          <div class="text-[10px] font-mono-tech text-slate-400">${comp.category}</div>
-        </div>
-        <i class="fa-solid fa-chevron-right text-[10px] text-slate-500 group-hover:text-sky-400"></i>
-      `;
-      btn.addEventListener('click', () => {
-        selectComponent(comp.id, true, true);
-      });
-      partsListContainer.appendChild(btn);
-    });
-    selectComponent('stator', false, false);
-
-    // Inspector Close (X) & Re-Open Pill Buttons
+    // Close / Open Inspector
     document.getElementById('btn-close-inspector').addEventListener('click', () => {
-      inspectorManuallyClosed = true;
-      document.getElementById('inspector-panel').classList.add('hidden');
-      const showBtn = document.getElementById('btn-show-inspector');
-      showBtn.classList.remove('hidden');
-      showBtn.classList.add('flex');
+      document.getElementById('inspector-card').classList.add('hidden');
+      document.getElementById('btn-show-inspector').classList.remove('hidden');
     });
-
     document.getElementById('btn-show-inspector').addEventListener('click', () => {
-      inspectorManuallyClosed = false;
-      document.getElementById('inspector-panel').classList.remove('hidden');
+      document.getElementById('inspector-card').classList.remove('hidden');
       document.getElementById('btn-show-inspector').classList.add('hidden');
     });
 
-    // Focus Camera & Isolate Part Buttons
-    document.getElementById('btn-focus-part').addEventListener('click', () => {
-      const comp = ENGINE_COMPONENTS.find(c => c.id === selectedComponentId);
-      if (comp && comp.camPos) {
-        const worldOffset = comp.explodeOffset.clone().multiplyScalar(explodeFactor);
-        animateCameraTo(comp.camPos.clone().add(worldOffset), worldOffset);
-      }
-    });
-
-    document.getElementById('btn-isolate-part').addEventListener('click', e => {
-      if (isolatedComponentId === selectedComponentId) {
-        isolatedComponentId = null;
-        e.currentTarget.textContent = 'Isolate';
-        Object.values(componentGroups).forEach(g => g.visible = true);
+    // Isolate Selected Part
+    document.getElementById('btn-isolate').addEventListener('click', () => {
+      if (isolatedCompId === selectedCompId) {
+        isolatedCompId = null;
+        document.getElementById('btn-isolate').textContent = 'Isolate Selected Part';
       } else {
-        isolatedComponentId = selectedComponentId;
-        e.currentTarget.textContent = 'Show All';
-        Object.entries(componentGroups).forEach(([id, g]) => {
-          g.visible = (id === selectedComponentId);
-        });
+        isolatedCompId = selectedCompId;
+        document.getElementById('btn-isolate').textContent = 'Show All Parts';
       }
-    });
-
-    document.getElementById('btn-show-all-parts').addEventListener('click', () => {
-      isolatedComponentId = null;
-      document.getElementById('btn-isolate-part').textContent = 'Isolate';
-      Object.values(componentGroups).forEach(g => g.visible = true);
-    });
-
-    // ============================================================================
-    // 10. UI TABS, SLIDERS & TOP BAR TOGGLES
-    // ============================================================================
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => {
-          b.classList.remove('active', 'bg-sky-500/20', 'text-sky-300', 'border', 'border-sky-400/30');
-          b.classList.add('text-slate-400');
-        });
-        btn.classList.add('active', 'bg-sky-500/20', 'text-sky-300', 'border', 'border-sky-400/30');
-        btn.classList.remove('text-slate-400');
-
-        const target = btn.dataset.tab;
-        document.querySelectorAll('.tab-content').forEach(panel => panel.classList.add('hidden'));
-        document.getElementById(`tab-${target}`).classList.remove('hidden');
+      COMPONENTS.forEach((c) => {
+        partGroups[c.id].visible = !isolatedCompId || c.id === isolatedCompId;
       });
     });
 
-    // Explode Slider
-    let explodeFactor = 0;
-    let targetExplodeFactor = 0;
-    document.getElementById('slider-explode').addEventListener('input', e => {
-      targetExplodeFactor = parseFloat(e.target.value) / 100;
-      document.getElementById('explode-val-label').textContent = `${e.target.value}%`;
+    // Raycaster Click (Only on intentional click, never while dragging!)
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let downPos = { x: 0, y: 0 };
+
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      downPos = { x: e.clientX, y: e.clientY };
     });
 
-    // Section Cutaway Slider & Top Toggle
-    const sliderCutaway = document.getElementById('slider-cutaway');
-    const btnCutaway = document.getElementById('btn-cutaway');
-
-    function applyCutawayPercent(pct) {
-      if (pct <= 0) {
-        clipPlaneY.constant = 100;
-        document.getElementById('cutaway-val-label').textContent = 'Off';
-        btnCutaway.classList.remove('active');
-        isCutawayActive = false;
-      } else {
-        const dist = 1.6 - (pct / 100) * 2.2;
-        clipPlaneY.constant = dist;
-        document.getElementById('cutaway-val-label').textContent = `${pct}%`;
-        btnCutaway.classList.add('active');
-        isCutawayActive = true;
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      const dist = Math.hypot(e.clientX - downPos.x, e.clientY - downPos.y);
+      if (dist > 5) return; // Ignore orbit drags
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects(clickableMeshes, false);
+      if (hits.length > 0) {
+        const cid = hits[0].object.userData.componentId;
+        if (cid) selectComponent(cid, false);
       }
-    }
-
-    sliderCutaway.addEventListener('input', e => {
-      applyCutawayPercent(parseInt(e.target.value, 10));
     });
+
+    // ---------------------------------------------------------
+    // 8. UI CONTROLS: EXPLODE, CUTAWAY, WORKSHOP TOGGLE
+    // ---------------------------------------------------------
+    const sliderExplode = document.getElementById('slider-explode');
+    sliderExplode.addEventListener('input', (e) => {
+      const ratio = Number(e.target.value) / 100;
+      document.getElementById('explode-val').textContent = `${e.target.value}%`;
+      COMPONENTS.forEach((c) => {
+        partGroups[c.id].position.copy(c.explodeVec).multiplyScalar(ratio);
+      });
+    });
+
+    let cutawayActive = false;
+    const btnCutaway = document.getElementById('btn-cutaway');
+    const cutawayBox = document.getElementById('cutaway-slider-box');
+    const sliderCutaway = document.getElementById('slider-cutaway');
 
     btnCutaway.addEventListener('click', () => {
-      const nextVal = isCutawayActive ? 0 : 65;
-      sliderCutaway.value = nextVal;
-      applyCutawayPercent(nextVal);
+      cutawayActive = !cutawayActive;
+      cutawayBox.classList.toggle('hidden', !cutawayActive);
+      clipPlane.constant = cutawayActive ? 0.15 : 100;
     });
 
-    // X-Ray Slider
-    document.getElementById('slider-xray').addEventListener('input', e => {
-      const val = parseInt(e.target.value, 10);
-      document.getElementById('xray-val-label').textContent = val === 0 ? 'Solid' : `${val}%`;
-      const opacity = 1 - (val / 100);
-      mats.castAluminum.transparent = val > 0;
-      mats.castAluminum.opacity = opacity;
-      mats.steelLaminations.transparent = val > 0;
-      mats.steelLaminations.opacity = opacity;
-    });
-
-    // EV Autoshop Environment Toggle
-    document.getElementById('btn-autoshop').addEventListener('click', e => {
-      autoshopGroup.visible = !autoshopGroup.visible;
-      e.currentTarget.classList.toggle('active', autoshopGroup.visible);
-    });
-
-    // Thermal Map Toggle
-    document.getElementById('btn-thermal').addEventListener('click', e => {
-      isThermalMode = !isThermalMode;
-      e.currentTarget.classList.toggle('active', isThermalMode);
-      if (!isThermalMode) {
-        mats.copperHairpin.emissive.setHex(0x000000);
-        mats.steelLaminations.emissive.setHex(0x000000);
+    sliderCutaway.addEventListener('input', (e) => {
+      const v = Number(e.target.value);
+      document.getElementById('cutaway-val').textContent = `${v}%`;
+      if (cutawayActive) {
+        clipPlane.constant = ((v - 50) / 50) * 1.8;
       }
     });
 
-    // Magnetic Flux Toggle
-    document.getElementById('btn-flux').addEventListener('click', e => {
-      isFluxVisible = !isFluxVisible;
-      fluxParticleGroup.visible = isFluxVisible;
-      e.currentTarget.classList.toggle('active', isFluxVisible);
+    document.getElementById('btn-toggle-workshop').addEventListener('click', (e) => {
+      workshopGroup.visible = !workshopGroup.visible;
+      e.currentTarget.querySelector('span').textContent = `Workshop Bench: ${workshopGroup.visible ? 'ON' : 'OFF'}`;
     });
 
-    // Reset Camera View
+    document.getElementById('btn-labels').addEventListener('click', () => {
+      labelsVisible = !labelsVisible;
+      labelsContainer.style.display = labelsVisible ? 'block' : 'none';
+    });
+
     document.getElementById('btn-reset-cam').addEventListener('click', () => {
-      animateCameraTo(new THREE.Vector3(6.4, 3.6, 5.8), new THREE.Vector3(0, 0.2, 0.4));
+      camera.position.set(6.2, 2.6, 6.8);
+      controls.target.set(0, 0.15, 0.5);
     });
 
-    // ============================================================================
-    // 11. REALISTIC POWERTRAIN DYNO PHYSICS, ACCELERATOR & BRAKE PEDALS
-    // ============================================================================
-    let isEngineRunning = false;
+    // Tabs switching
+    const tabExplore = document.getElementById('tab-btn-explore');
+    const tabOperate = document.getElementById('tab-btn-operate');
+    const panelExplore = document.getElementById('panel-explore');
+    const panelOperate = document.getElementById('panel-operate');
+
+    tabExplore.addEventListener('click', () => {
+      panelExplore.classList.remove('hidden');
+      panelOperate.classList.add('hidden');
+      tabExplore.className = 'py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/30';
+      tabOperate.className = 'py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white';
+    });
+
+    tabOperate.addEventListener('click', () => {
+      panelOperate.classList.remove('hidden');
+      panelExplore.classList.add('hidden');
+      tabOperate.className = 'py-1.5 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/30';
+      tabExplore.className = 'py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white';
+    });
+
+    // ---------------------------------------------------------
+    // 9. ZERO-LEAK SYNTHESIZED EV SOUND & DYNO TELEMETRY
+    // ---------------------------------------------------------
+    let audioCtx = null;
+    let masterGain = null;
+    let harmonicOsc = null;
+    let gearOsc = null;
+    let engineRunning = false;
+    let throttleHeld = false;
+    let brakeHeld = false;
+    let launchActive = false;
+    let launchStartTime = 0;
+
     let currentRpm = 0;
-    let manualTargetRpm = 0;
-    let isAccelerating = false;
-    let isBraking = false;
-    let statorTemperature = 28.0;
+    const MAX_RPM = 18000;
+    let targetZeroToSixtySec = 5.8; // Realistic standard EV default
 
-    // Realistic EV Acceleration Profiles (RPM gain per second to reach 60 MPH = 7,150 RPM)
-    const ACCEL_PROFILES = {
-      standard: { label: '0-60 in 5.8s', rpmRate: 1232, peakG: 0.52 },
-      sport:    { label: '0-60 in 4.2s', rpmRate: 1702, peakG: 0.72 },
-      hyper:    { label: '0-60 in 2.8s', rpmRate: 2553, peakG: 1.08 }
-    };
-    let activeProfile = ACCEL_PROFILES.standard;
+    function startAudioEngine() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (masterGain) return;
 
-    // 0-60 MPH Automated Sprint State
-    let isSprintActive = false;
-    let sprintElapsed = 0;
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+      masterGain.connect(audioCtx.destination);
 
-    const btnEnginePower = document.getElementById('btn-engine-power');
-    const btnPedalAccel = document.getElementById('btn-pedal-accel');
-    const btnPedalBrake = document.getElementById('btn-pedal-brake');
+      harmonicOsc = audioCtx.createOscillator();
+      harmonicOsc.type = 'sine';
+      harmonicOsc.frequency.setValueAtTime(140, audioCtx.currentTime);
 
-    function setEngineRunningState(state) {
-      isEngineRunning = state;
-      playContactorClack(state);
+      gearOsc = audioCtx.createOscillator();
+      gearOsc.type = 'triangle';
+      gearOsc.frequency.setValueAtTime(70, audioCtx.currentTime);
 
-      const dot = document.getElementById('engine-status-dot');
-      const statusText = document.getElementById('engine-status-text');
-      const label = document.getElementById('btn-engine-power-label');
+      harmonicOsc.connect(masterGain);
+      gearOsc.connect(masterGain);
+      harmonicOsc.start();
+      gearOsc.start();
+    }
 
-      if (isEngineRunning) {
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
-        statusText.textContent = '800V Inverter Active (Ready)';
-        statusText.className = 'text-[11px] text-emerald-400 font-medium';
-        label.textContent = 'Stop Engine';
-        btnEnginePower.className = 'px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-rose-600 hover:bg-rose-500 text-white shadow-lg transition flex items-center gap-1.5';
+    function stopAudioEngine() {
+      if (masterGain && audioCtx) {
+        try {
+          harmonicOsc.stop();
+          gearOsc.stop();
+          masterGain.disconnect();
+        } catch (e) {}
+        harmonicOsc = null;
+        gearOsc = null;
+        masterGain = null;
+      }
+    }
+
+    const btnPower = document.getElementById('btn-power');
+    btnPower.addEventListener('click', () => {
+      engineRunning = !engineRunning;
+      if (engineRunning) {
+        startAudioEngine();
+        currentRpm = 650;
+        btnPower.innerHTML = `<i data-lucide="power" class="w-4 h-4"></i><span>STOP ENGINE</span>`;
+        btnPower.className = 'px-3.5 py-2 rounded-lg text-xs font-bold bg-rose-500 text-white hover:bg-rose-400 transition flex items-center gap-1.5';
+        document.getElementById('ignition-status').textContent = 'HV Bus Active • Ready to Drive';
       } else {
-        isAccelerating = false;
-        isSprintActive = false;
-        manualTargetRpm = 0;
-        document.getElementById('slider-rpm').value = 0;
-        document.getElementById('manual-rpm-label').textContent = '0 RPM';
-        dot.className = 'w-2 h-2 rounded-full bg-rose-500';
-        statusText.textContent = 'System Offline (Silent)';
-        statusText.className = 'text-[11px] text-slate-400';
-        label.textContent = 'Start Engine';
-        btnEnginePower.className = 'px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition flex items-center gap-1.5';
-        updateEngineAudio(false, 0, 0);
+        currentRpm = 0;
+        launchActive = false;
+        stopAudioEngine();
+        btnPower.innerHTML = `<i data-lucide="power" class="w-4 h-4"></i><span>START ENGINE</span>`;
+        btnPower.className = 'px-3.5 py-2 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition flex items-center gap-1.5';
+        document.getElementById('ignition-status').textContent = 'Inverter Standby (Silent)';
       }
-    }
-
-    btnEnginePower.addEventListener('click', () => {
-      setEngineRunningState(!isEngineRunning);
+      lucide.createIcons();
     });
 
-    // Accelerator Pedal Events
-    function startAccelerating() {
-      if (!isEngineRunning) setEngineRunningState(true);
-      isBraking = false;
-      isAccelerating = true;
-      btnPedalAccel.classList.add('pressed', 'border-emerald-400');
-    }
-    function stopAccelerating() {
-      isAccelerating = false;
-      btnPedalAccel.classList.remove('pressed', 'border-emerald-400');
-    }
-
-    btnPedalAccel.addEventListener('pointerdown', startAccelerating);
-    window.addEventListener('pointerup', stopAccelerating);
-
-    // Brake Pedal Events
-    function startBraking() {
-      isAccelerating = false;
-      isSprintActive = false;
-      isBraking = true;
-      manualTargetRpm = 0;
-      document.getElementById('slider-rpm').value = 0;
-      document.getElementById('manual-rpm-label').textContent = '0 RPM';
-      btnPedalBrake.classList.add('pressed', 'border-rose-400');
-      playBrakeCaliperSound();
-    }
-    function stopBraking() {
-      isBraking = false;
-      btnPedalBrake.classList.remove('pressed', 'border-rose-400');
-    }
-
-    btnPedalBrake.addEventListener('pointerdown', startBraking);
-    window.addEventListener('pointerup', stopBraking);
-
-    // Keyboard Shortcuts (Space/W/Up for Accelerator, B/S/Down for Brake)
-    window.addEventListener('keydown', e => {
-      if (e.repeat) return;
-      if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
-        e.preventDefault();
-        startAccelerating();
-      } else if (e.code === 'KeyB' || e.code === 'KeyS' || e.code === 'ArrowDown') {
-        e.preventDefault();
-        startBraking();
-      }
-    });
-    window.addEventListener('keyup', e => {
-      if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
-        stopAccelerating();
-      } else if (e.code === 'KeyB' || e.code === 'KeyS' || e.code === 'ArrowDown') {
-        stopBraking();
-      }
-    });
-
-    // Profile Selector Buttons
-    document.querySelectorAll('.profile-btn').forEach(btn => {
+    // Profile buttons
+    document.querySelectorAll('.profile-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.profile-btn').forEach(b => {
-          b.className = 'profile-btn py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-slate-800/80 text-slate-400 border border-slate-700';
+        const p = btn.dataset.profile;
+        targetZeroToSixtySec = p === 'hyper' ? 2.8 : p === 'sport' ? 4.2 : 5.8;
+        document.querySelectorAll('.profile-btn').forEach((b) => {
+          b.className = 'profile-btn py-1.5 px-2 rounded bg-slate-800 border border-slate-700 text-slate-300';
         });
-        btn.className = 'profile-btn active py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/40';
-        activeProfile = ACCEL_PROFILES[btn.dataset.profile];
-        document.getElementById('profile-target-badge').textContent = activeProfile.label;
+        btn.className = 'profile-btn py-1.5 px-2 rounded bg-sky-500/20 border border-sky-400/40 text-sky-300 font-semibold';
       });
     });
 
-    // 0-60 MPH Automated Sprint Launch
-    document.getElementById('btn-launch-sprint').addEventListener('click', () => {
-      if (!isEngineRunning) setEngineRunningState(true);
-      currentRpm = 0;
-      sprintElapsed = 0;
-      isBraking = false;
-      isSprintActive = true;
-      document.getElementById('sprint-result-text').textContent = 'LAUNCHING 0.00s...';
+    // Pedal Bindings
+    const btnAccel = document.getElementById('btn-accel');
+    const btnBrake = document.getElementById('btn-brake');
+
+    btnAccel.addEventListener('pointerdown', () => {
+      if (!engineRunning) btnPower.click();
+      throttleHeld = true;
+    });
+    window.addEventListener('pointerup', () => {
+      throttleHeld = false;
+      brakeHeld = false;
+    });
+    btnBrake.addEventListener('pointerdown', () => {
+      brakeHeld = true;
+      launchActive = false;
     });
 
-    // Manual RPM Slider
-    document.getElementById('slider-rpm').addEventListener('input', e => {
-      manualTargetRpm = parseFloat(e.target.value);
-      document.getElementById('manual-rpm-label').textContent = `${Math.round(manualTargetRpm).toLocaleString()} RPM`;
-      if (manualTargetRpm > 0 && !isEngineRunning) {
-        setEngineRunningState(true);
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') {
+        if (!engineRunning) btnPower.click();
+        throttleHeld = true;
+      }
+      if (e.code === 'KeyB' || e.code === 'KeyS' || e.code === 'ArrowDown') {
+        brakeHeld = true;
+        launchActive = false;
       }
     });
-
-    // ============================================================================
-    // 12. GUIDED 7-STEP TOUR LOGIC
-    // ============================================================================
-    let currentTourIndex = 0;
-    const tourBar = document.getElementById('tour-bar');
-
-    function showTourStep(idx) {
-      currentTourIndex = (idx + TOUR_STEPS.length) % TOUR_STEPS.length;
-      const step = TOUR_STEPS[currentTourIndex];
-      document.getElementById('tour-step-badge').textContent = `STEP ${currentTourIndex + 1} OF ${TOUR_STEPS.length}`;
-      document.getElementById('tour-title').textContent = step.title;
-      document.getElementById('tour-text').textContent = step.text;
-      selectComponent(step.partId, true, true);
-    }
-
-    document.getElementById('btn-tour').addEventListener('click', () => {
-      tourBar.classList.remove('hidden');
-      showTourStep(0);
-    });
-    document.getElementById('btn-close-tour').addEventListener('click', () => {
-      tourBar.classList.add('hidden');
-    });
-    document.getElementById('btn-tour-prev').addEventListener('click', () => showTourStep(currentTourIndex - 1));
-    document.getElementById('btn-tour-next').addEventListener('click', () => showTourStep(currentTourIndex + 1));
-
-    // ============================================================================
-    // 13. SAVE / EXPORT HTML & GITHUB REPO MODAL
-    // ============================================================================
-    const saveModal = document.getElementById('save-modal');
-    document.getElementById('btn-save-repo').addEventListener('click', () => {
-      saveModal.classList.remove('hidden');
-    });
-    document.getElementById('btn-close-save-modal').addEventListener('click', () => {
-      saveModal.classList.add('hidden');
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') throttleHeld = false;
+      if (e.code === 'KeyB' || e.code === 'KeyS' || e.code === 'ArrowDown') brakeHeld = false;
     });
 
-    // One-Click Standalone HTML File Download
-    document.getElementById('btn-download-html').addEventListener('click', () => {
-      const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-      const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'index.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    document.getElementById('btn-launch').addEventListener('click', () => {
+      if (!engineRunning) btnPower.click();
+      currentRpm = 0;
+      launchActive = true;
+      launchStartTime = performance.now();
     });
 
-    // Copy Full HTML Source to Clipboard
-    document.getElementById('btn-copy-source').addEventListener('click', () => {
-      const fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
-      const tempArea = document.createElement('textarea');
-      tempArea.value = fullHtml;
-      document.body.appendChild(tempArea);
-      tempArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(tempArea);
-
-      const lbl = document.getElementById('copy-source-label');
-      lbl.textContent = 'Copied to Clipboard!';
-      setTimeout(() => { lbl.textContent = 'Copy Source Code'; }, 2200);
-    });
-
-    // ============================================================================
-    // 14. CAMERA SMOOTH ANIMATION & MAIN RENDER LOOP
-    // ============================================================================
-    let camAnim = null;
-    function animateCameraTo(targetPos, targetLookAt) {
-      camAnim = {
-        startPos: camera.position.clone(),
-        endPos: targetPos.clone(),
-        startLook: controls.target.clone(),
-        endLook: targetLookAt.clone(),
-        progress: 0
-      };
-    }
-
-    let lastFrameTime = performance.now();
+    // ---------------------------------------------------------
+    // 10. MAIN RENDER & PHYSICS LOOP
+    // ---------------------------------------------------------
+    let lastTime = performance.now();
 
     function animate(now) {
       requestAnimationFrame(animate);
-      const dt = Math.min((now - lastFrameTime) / 1000, 0.1);
-      lastFrameTime = now;
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
 
-      // 1. Smooth Camera Flight
-      if (camAnim) {
-        camAnim.progress += dt * 2.2;
-        const t = Math.min(camAnim.progress, 1.0);
-        const ease = 1 - Math.pow(1 - t, 3);
-        camera.position.lerpVectors(camAnim.startPos, camAnim.endPos, ease);
-        controls.target.lerpVectors(camAnim.startLook, camAnim.endLook, ease);
-        if (t >= 1.0) camAnim = null;
-      }
-      controls.update();
-
-      // 2. Smooth Axial Exploded View Interpolation
-      explodeFactor += (targetExplodeFactor - explodeFactor) * 0.12;
-      ENGINE_COMPONENTS.forEach(comp => {
-        const grp = componentGroups[comp.id];
-        if (grp) {
-          grp.position.copy(comp.explodeOffset).multiplyScalar(explodeFactor);
-        }
-      });
-
-      // 3. Powertrain Physics & RPM Dynamics
-      let currentGForce = 0;
-      let throttleLoad = 0;
-
-      if (isEngineRunning) {
-        if (isBraking) {
-          // Hydraulic + Regenerative Braking (-1.24 G deceleration)
-          const brakeRate = 2950;
-          if (currentRpm > 0) {
-            currentRpm = Math.max(0, currentRpm - brakeRate * dt);
-            currentGForce = -1.24;
+      // Update RPM physics (60 MPH corresponds to ~7,950 RPM)
+      const SIXTY_MPH_RPM = 7950;
+      if (engineRunning) {
+        if (brakeHeld) {
+          currentRpm = Math.max(0, currentRpm - 9800 * dt);
+        } else if (throttleHeld || launchActive) {
+          const accelRate = SIXTY_MPH_RPM / targetZeroToSixtySec;
+          currentRpm = Math.min(MAX_RPM, currentRpm + accelRate * dt);
+          if (launchActive && currentRpm >= SIXTY_MPH_RPM) {
+            launchActive = false;
+            const elapsed = ((now - launchStartTime) / 1000).toFixed(2);
+            document.getElementById('hud-timer').textContent = `${elapsed} s (0-60 MPH)`;
+          } else if (launchActive) {
+            const elapsed = ((now - launchStartTime) / 1000).toFixed(2);
+            document.getElementById('hud-timer').textContent = `${elapsed} s...`;
           }
-        } else if (isSprintActive) {
-          // 0-60 MPH Automated Dyno Sprint (60 MPH = 7,150 RPM)
-          sprintElapsed += dt;
-          currentRpm += activeProfile.rpmRate * dt;
-          throttleLoad = 1.0;
-          currentGForce = activeProfile.peakG;
-          const mphCheck = (currentRpm / 7150) * 60;
-          if (mphCheck >= 60) {
-            isSprintActive = false;
-            manualTargetRpm = 7150;
-            document.getElementById('slider-rpm').value = 7150;
-            document.getElementById('manual-rpm-label').textContent = '7,150 RPM';
-            document.getElementById('sprint-result-text').textContent = `0-60 MPH in ${sprintElapsed.toFixed(2)}s!`;
-          } else {
-            document.getElementById('sprint-result-text').textContent = `Sprinting: ${sprintElapsed.toFixed(2)}s`;
-          }
-        } else if (isAccelerating) {
-          // WOT Accelerator Pedal Held
-          const taper = 1.0 - (currentRpm / 24000) * 0.35;
-          currentRpm = Math.min(18000, currentRpm + activeProfile.rpmRate * taper * dt);
-          throttleLoad = 1.0;
-          currentGForce = activeProfile.peakG * taper;
         } else {
-          // Coasting / Regenerative Deceleration toward Manual Target RPM
-          const diff = manualTargetRpm - currentRpm;
-          if (Math.abs(diff) > 5) {
-            const coastRate = diff > 0 ? 1100 : 850;
-            currentRpm += Math.sign(diff) * Math.min(Math.abs(diff), coastRate * dt);
-            currentGForce = diff > 0 ? 0.18 : -0.18;
-            throttleLoad = diff > 0 ? 0.35 : 0.0;
-          } else {
-            currentRpm = manualTargetRpm;
-          }
+          // Gentle regenerative coast down to idle
+          currentRpm = Math.max(600, currentRpm - 2100 * dt);
         }
       } else {
-        // Engine Off Coast Down
-        currentRpm = Math.max(0, currentRpm - 1800 * dt);
+        currentRpm = Math.max(0, currentRpm - 5000 * dt);
       }
 
-      // 4. Rotate 3D Rotor, Shaft & Helical Reduction Gears
-      const radPerSec = (currentRpm / 60) * Math.PI * 2;
-      const deltaAngle = radPerSec * dt * 0.035; // Visual scaling so teeth are discernible
-      rotatingRotorGroup.rotation.z += deltaAngle;
-      componentGroups['shaft'].rotation.z += deltaAngle;
+      // Spin Rotor, Shaft & Helical Gearbox Meshes
+      const radPerSec = (currentRpm / 60) * Math.PI * 2 * 0.065;
+      rotatingParts.forEach((item) => {
+        item.mesh.rotation.z += radPerSec * item.ratio * dt;
+      });
 
-      const pinion = rotatingGearGroup.getObjectByName('pinionGear');
-      const counter = rotatingGearGroup.getObjectByName('counterGear');
-      const diffRing = rotatingGearGroup.getObjectByName('diffRingGear');
-      if (pinion) pinion.rotation.z += deltaAngle;
-      if (counter) counter.rotation.z -= deltaAngle * 0.48;
-      if (diffRing) diffRing.rotation.z += deltaAngle * 0.11;
+      // Update Web Audio Pitch & Gain (Completely silent when stopped)
+      if (masterGain && audioCtx) {
+        const rpmNorm = currentRpm / MAX_RPM;
+        const gainVal = currentRpm > 50 ? Math.min(0.14, 0.015 + rpmNorm * 0.12) : 0.0;
+        masterGain.gain.setTargetAtTime(gainVal, audioCtx.currentTime, 0.04);
+        harmonicOsc.frequency.setTargetAtTime(110 + rpmNorm * 920, audioCtx.currentTime, 0.04);
+        gearOsc.frequency.setTargetAtTime(55 + rpmNorm * 460, audioCtx.currentTime, 0.04);
+      }
 
-      // 5. Animate Magnetic Flux Particles in Stator Air Gap
-      if (isFluxVisible) {
-        fluxMeshes.forEach((item, idx) => {
-          const a = item.baseAngle + rotatingRotorGroup.rotation.z * 2;
-          item.mesh.position.x = Math.cos(a) * 0.71;
-          item.mesh.position.y = Math.sin(a) * 0.71;
-          item.mesh.scale.setScalar(currentRpm > 10 ? 1.0 + throttleLoad * 0.4 : 0.65);
+      // Update Telemetry HUD
+      const mph = Math.round((currentRpm / SIXTY_MPH_RPM) * 60);
+      const torqueNm = engineRunning && (throttleHeld || launchActive) ? Math.round(380 * (1 - (currentRpm / MAX_RPM) * 0.45)) : 0;
+      const powerKw = Math.round((torqueNm * currentRpm) / 9549);
+
+      document.getElementById('hud-mph').textContent = mph;
+      document.getElementById('hud-rpm').textContent = Math.round(currentRpm).toLocaleString();
+      document.getElementById('hud-kw').textContent = powerKw;
+      document.getElementById('hud-nm').textContent = torqueNm;
+
+      // Update 2D Floating Callout Labels
+      if (labelsVisible) {
+        COMPONENTS.forEach((c) => {
+          const pill = labelEls[c.id];
+          const grp = partGroups[c.id];
+          if (!grp.visible) {
+            pill.style.display = 'none';
+            return;
+          }
+          const worldPos = grp.position.clone().add(c.labelOffset).add(motorRoot.position);
+          worldPos.project(camera);
+          if (worldPos.z > 1) {
+            pill.style.display = 'none';
+          } else {
+            pill.style.display = 'block';
+            const x = (worldPos.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-worldPos.y * 0.5 + 0.5) * window.innerHeight;
+            pill.style.left = `${x}px`;
+            pill.style.top = `${y}px`;
+            pill.style.transform = 'translate(-50%, -50%)';
+          }
         });
       }
 
-      // 6. Thermal Modeling & Optional Thermal Heatmap Shader
-      const targetTemp = 28 + (currentRpm / 18000) * 95 + throttleLoad * 32;
-      statorTemperature += (targetTemp - statorTemperature) * dt * 0.4;
-      if (isThermalMode) {
-        const heatNorm = Math.min((statorTemperature - 28) / 120, 1.0);
-        mats.copperHairpin.emissive.setRGB(heatNorm * 0.85, heatNorm * 0.18, 0);
-        mats.steelLaminations.emissive.setRGB(heatNorm * 0.35, 0.04, 0.15);
-      }
-
-      // 7. Update Web Audio Synthesizer
-      updateEngineAudio(isEngineRunning, currentRpm, throttleLoad);
-
-      // 8. Update Live Cockpit HUD Telemetry
-      const mph = (currentRpm / 7150) * 60;
-      const kmh = mph * 1.60934;
-      const torqueNm = isEngineRunning
-        ? Math.round((currentRpm < 6500 ? 520 : 520 * (6500 / Math.max(currentRpm, 6500))) * (0.15 + 0.85 * Math.max(throttleLoad, currentRpm / 18000)))
-        : 0;
-      const powerKw = Math.round((torqueNm * currentRpm) / 9549);
-
-      document.getElementById('hud-mph').textContent = Math.round(mph);
-      document.getElementById('hud-kmh').textContent = `${Math.round(kmh)} km/h`;
-      document.getElementById('hud-rpm').innerHTML = `${Math.round(currentRpm).toLocaleString()} <span class="text-[10px] text-slate-500">/ 18,000</span>`;
-      document.getElementById('hud-kw').textContent = powerKw;
-      document.getElementById('hud-nm').textContent = torqueNm;
-      document.getElementById('hud-temp').textContent = `${Math.round(statorTemperature)}°C`;
-      document.getElementById('hud-gforce').textContent = `${currentGForce >= 0 ? '+' : ''}${currentGForce.toFixed(2)} G`;
-
-      const modeBadge = document.getElementById('hud-mode-badge');
-      if (!isEngineRunning) {
-        modeBadge.textContent = 'OFFLINE';
-        modeBadge.className = 'px-2.5 py-1 rounded-lg bg-slate-800/90 border border-slate-700 text-[11px] font-mono-tech font-bold text-slate-400';
-      } else if (isBraking && currentRpm > 5) {
-        modeBadge.textContent = 'BRAKE';
-        modeBadge.className = 'px-2.5 py-1 rounded-lg bg-rose-500/25 border border-rose-400 text-[11px] font-mono-tech font-bold text-rose-300';
-      } else if (isBraking && currentRpm <= 5) {
-        modeBadge.textContent = 'HOLD';
-        modeBadge.className = 'px-2.5 py-1 rounded-lg bg-amber-500/25 border border-amber-400 text-[11px] font-mono-tech font-bold text-amber-300';
-      } else if (isAccelerating || isSprintActive) {
-        modeBadge.textContent = 'POWER';
-        modeBadge.className = 'px-2.5 py-1 rounded-lg bg-emerald-500/25 border border-emerald-400 text-[11px] font-mono-tech font-bold text-emerald-300';
-      } else {
-        modeBadge.textContent = 'READY';
-        modeBadge.className = 'px-2.5 py-1 rounded-lg bg-sky-500/20 border border-sky-400/40 text-[11px] font-mono-tech font-bold text-sky-300';
-      }
-
+      controls.update();
       renderer.render(scene, camera);
     }
+
+    requestAnimationFrame(animate);
 
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
-
-    window.onload = function () {
-      animate(performance.now());
-    };
   </script>
 </body>
 </html>
